@@ -1,8 +1,9 @@
 import express, { Application, Request, Response } from "express";
 import bodyParser from "body-parser";
 
-import { PORT } from "./config";
+
 import { connectDatabase } from "./database/mongodb";
+import { PORT } from "./configs";
 
 const app: Application = express();
 
