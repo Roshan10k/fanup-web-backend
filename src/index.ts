@@ -1,18 +1,17 @@
 import express, { Application, Request, Response } from "express";
-import bodyParser from "body-parser";
-
+import authRoutes from "./routes/auth.route";
 
 import { connectDatabase } from "./database/mongodb";
 import { PORT } from "./configs";
 
 const app: Application = express();
 
-// Middleware
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+// middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Routes
-//will add routes here later
+app.use("/api/auth", authRoutes);
 
 // Test route
 app.get("/", (req: Request, res: Response) => {
