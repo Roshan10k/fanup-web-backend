@@ -33,28 +33,31 @@ export class AuthController {
   }
 
   async loginUser(req: Request, res: Response) {
-    try {
-      const validatedData = LoginUserDtoSchema.parse(req.body);
-      const user = await userService.loginUser(validatedData);
-      const { password, ...userWithoutPassword } = user.toObject();
-      
-      return res.status(200).json({
-        success: true,
-        message: "Login successful",
-        data: userWithoutPassword,
-      });
-    } catch (error) {
-      if (error instanceof HttpError) {
-        return res.status(error.statusCode).json({
-          success: false,
-          message: error.message,
-        });
+  try {
+    const validatedData = LoginUserDtoSchema.parse(req.body);
+    const { user, token } = await userService.loginUser(validatedData);
+    const { password, ...userWithoutPassword } = user.toObject();
+    
+    return res.status(200).json({
+      success: true,
+      message: "Login successful",
+      data: {
+        user: userWithoutPassword,
+        token: token
       }
-      
-      return res.status(400).json({
+    });
+  } catch (error) {
+    if (error instanceof HttpError) {
+      return res.status(error.statusCode).json({
         success: false,
-        message: error instanceof Error ? error.message : "Login failed",
+        message: error.message,
       });
     }
+    
+    return res.status(400).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Login failed",
+    });
   }
+}
 }
