@@ -1,5 +1,7 @@
 import express, { Application, Request, Response } from "express";
 import authRoutes from "./routes/auth.route";
+import userRoutes from "./routes/user.route";
+import adminUserRoutes from "./routes/admin/user.route";
 
 import { connectDatabase } from "./database/mongodb";
 import { PORT } from "./configs";
@@ -12,6 +14,8 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use("/api/auth", authRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/admin/users", adminUserRoutes);
 
 // Test route
 app.get("/", (req: Request, res: Response) => {
