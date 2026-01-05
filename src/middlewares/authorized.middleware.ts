@@ -8,7 +8,7 @@ import { HttpError } from '../errors/http-error';
 declare global{
     namespace Express {
         interface Request {
-            user?: IUser  // Add user property to Request interface
+            user?: IUser
         }
     }
 }
@@ -26,11 +26,11 @@ export const authorizedMiddleware =
             if(!token) throw new HttpError(401, 'Unauthorized: JWT missing');
             
             const decodedToken = jwt.verify(token, JWT_SECRET) as Record<string, any>;
-            if(!decodedToken || !decodedToken.userId){  
+            if(!decodedToken || !decodedToken.id){  
                 throw new HttpError(401, 'Unauthorized: JWT unverified');
             }
             
-            const user = await userRepository.getUserById(decodedToken.userId);  // Changed to userId
+            const user = await userRepository.getUserById(decodedToken.id);  // Using 'id'
             if(!user) throw new HttpError(401, 'Unauthorized: user not found');
             
             req.user = user;
