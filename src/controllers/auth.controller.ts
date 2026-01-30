@@ -11,7 +11,7 @@ export class AuthController {
       const validatedData = CreateUserDtoSchema.parse(req.body);
       const newUser = await userService.registerUser(validatedData);
       const { password, ...userWithoutPassword } = newUser.toObject();
-      
+
       return res.status(201).json({
         success: true,
         message: "User registered successfully",
@@ -24,7 +24,7 @@ export class AuthController {
           message: error.message,
         });
       }
-      
+
       return res.status(400).json({
         success: false,
         message: error instanceof Error ? error.message : "Registration failed",
@@ -33,31 +33,72 @@ export class AuthController {
   }
 
   async loginUser(req: Request, res: Response) {
-  try {
-    const validatedData = LoginUserDtoSchema.parse(req.body);
-    const { user, token } = await userService.loginUser(validatedData);
-    const { password, ...userWithoutPassword } = user.toObject();
-    
-    return res.status(200).json({
-      success: true,
-      message: "Login successful",
-      data: {
-        user: userWithoutPassword,
-        token: token
+    try {
+      const validatedData = LoginUserDtoSchema.parse(req.body);
+      const { user, token } = await userService.loginUser(validatedData);
+      const { password, ...userWithoutPassword } = user.toObject();
+
+      return res.status(200).json({
+        success: true,
+        message: "Login successful",
+        token: token,
+        data: userWithoutPassword,
+      });
+    } catch (error) {
+      if (error instanceof HttpError) {
+        return res.status(error.statusCode).json({
+          success: false,
+          message: error.message,
+        });
       }
-    });
-  } catch (error) {
-    if (error instanceof HttpError) {
-      return res.status(error.statusCode).json({
+
+      return res.status(400).json({
         success: false,
-        message: error.message,
+        message: error instanceof Error ? error.message : "Login failed",
       });
     }
-    
-    return res.status(400).json({
-      success: false,
-      message: error instanceof Error ? error.message : "Login failed",
-    });
   }
-}
+
+  async uploadProfilePicture(req: Request, res: Response) {
+    try {
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          message: "No file uploaded",
+        });
+      }
+
+      const userId = req.user?._id.toString();
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
+
+      const updatedUser = await userService.updateProfilePicture(
+        userId,
+        req.file.filename
+      );
+      const { password, ...userWithoutPassword } = updatedUser.toObject();
+
+      return res.status(200).json({
+        success: true,
+        message: "Profile picture uploaded successfully",
+        data: userWithoutPassword,
+      });
+    } catch (error) {
+      if (error instanceof HttpError) {
+        return res.status(error.statusCode).json({
+          success: false,
+          message: error.message,
+        });
+      }
+
+      return res.status(500).json({
+        success: false,
+        message: error instanceof Error ? error.message : "Upload failed",
+      });
+    }
+  }
 }

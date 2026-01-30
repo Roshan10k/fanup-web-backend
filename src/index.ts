@@ -2,6 +2,7 @@ import express, { Application, Request, Response } from "express";
 import authRoutes from "./routes/auth.route";
 import userRoutes from "./routes/user.route";
 import adminUserRoutes from "./routes/admin/user.route";
+import path from "path";
 
 import { connectDatabase } from "./database/mongodb";
 import { PORT } from "./configs";
@@ -11,6 +12,9 @@ const app: Application = express();
 // middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Serve static files from public folder
+app.use("/public", express.static(path.join(__dirname, "../public")));
 
 // Routes
 app.use("/api/auth", authRoutes);
