@@ -1,10 +1,28 @@
 import { UserRepository } from "../../repositories/user.repository";
 import { HttpError } from "../../errors/http-error";
-import { UpdateUserDto } from "../../dtos/user.dto";
+import { UpdateUserDto, CreateUserDto } from "../../dtos/user.dto";
+import bcryptjs from "bcryptjs";
 
 const userRepository = new UserRepository();
 
 export class AdminUserService {
+  // Create new user
+  async createUser(userData: CreateUserDto & { profilePicture?: string | null }) {
+    // Check if email already exists
+    const existingEmail = await userRepository.getUserByEmail(userData.email);
+    if (existingEmail) {
+      throw new HttpError(409, "Email already in use");
+    }
+
+    // Hash password
+    const hashedPassword = await bcryptjs.hash(userData.password, 10);
+    const { confirmPassword, ...userPayload } = userData;
+    userPayload.password = hashedPassword;
+
+    const newUser = await userRepository.createUser(userPayload);
+    return newUser;
+  }
+
   // Get all users
   async getAllUsers() {
     return await userRepository.getAllUsers();

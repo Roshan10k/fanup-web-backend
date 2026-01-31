@@ -1,12 +1,47 @@
 import { Request, Response } from "express";
 
-import { UpdateUserDtoSchema } from "../../dtos/user.dto";
+import { UpdateUserDtoSchema, CreateUserDtoSchema } from "../../dtos/user.dto";
 import { HttpError } from "../../errors/http-error";
 import { AdminUserService } from "../../services/admin/adminuser.service";
 
 const adminUserService = new AdminUserService();
 
 export class AdminUserController {
+  // Create new user (admin only)
+  async createUser(req: Request, res: Response) {
+    try {
+      const validatedData = CreateUserDtoSchema.parse(req.body);
+      
+      // Add profile picture if uploaded
+      const profilePicture = req.file ? req.file.filename : null;
+      
+      const newUser = await adminUserService.createUser({
+        ...validatedData,
+        profilePicture
+      });
+      
+      const { password, ...userWithoutPassword } = newUser.toObject();
+
+      return res.status(201).json({
+        success: true,
+        message: "User created successfully",
+        data: userWithoutPassword,
+      });
+    } catch (error) {
+      if (error instanceof HttpError) {
+        return res.status(error.statusCode).json({
+          success: false,
+          message: error.message,
+        });
+      }
+
+      return res.status(400).json({
+        success: false,
+        message: error instanceof Error ? error.message : "User creation failed",
+      });
+    }
+  }
+
   // Get all users
   async getAllUsers(req: Request, res: Response) {
     try {
@@ -65,6 +100,11 @@ export class AdminUserController {
     try {
       const { id } = req.params;
       const validatedData = UpdateUserDtoSchema.parse(req.body);
+      
+      // Add profile picture if uploaded
+      if (req.file) {
+        validatedData.profilePicture = req.file.filename;
+      }
       
       const updatedUser = await adminUserService.updateUser(id, validatedData);
       const { password, ...userWithoutPassword } = updatedUser.toObject();
