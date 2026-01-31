@@ -13,8 +13,15 @@ const app: Application = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve static files from public folder
-app.use("/public", express.static(path.join(__dirname, "../public")));
+// Serve static files for profile pictures
+app.use(
+  "/uploads/profile-pictures",
+  express.static(path.join(__dirname, "../public/uploads/profile-pictures"))
+);
+
+
+
+
 
 // Routes
 app.use("/api/auth", authRoutes);

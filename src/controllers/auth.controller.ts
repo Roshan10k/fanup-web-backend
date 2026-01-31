@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { UserService } from "../services/user.service";
-import { CreateUserDtoSchema, LoginUserDtoSchema } from "../dtos/user.dto";
+import { CreateUserDtoSchema, LoginUserDtoSchema, UpdateUserDtoSchema } from "../dtos/user.dto";
 import { HttpError } from "../errors/http-error";
 
 const userService = new UserService();
@@ -98,6 +98,48 @@ export class AuthController {
       return res.status(500).json({
         success: false,
         message: error instanceof Error ? error.message : "Upload failed",
+      });
+    }
+  }
+
+  async updateUser(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      
+      // Verify the user is updating their own profile or is admin
+      if (req.user?._id.toString() !== id && req.user?.role !== 'admin') {
+        return res.status(403).json({
+          success: false,
+          message: "Forbidden: Cannot update another user's profile",
+        });
+      }
+
+      const validatedData = UpdateUserDtoSchema.parse(req.body);
+      
+      // Add profile picture if uploaded
+      if (req.file) {
+        validatedData.profilePicture = req.file.filename;
+      }
+      
+      const updatedUser = await userService.updateProfile(id, validatedData);
+      const { password, ...userWithoutPassword } = updatedUser.toObject();
+
+      return res.status(200).json({
+        success: true,
+        message: "User updated successfully",
+        data: userWithoutPassword,
+      });
+    } catch (error) {
+      if (error instanceof HttpError) {
+        return res.status(error.statusCode).json({
+          success: false,
+          message: error.message,
+        });
+      }
+
+      return res.status(400).json({
+        success: false,
+        message: error instanceof Error ? error.message : "Update failed",
       });
     }
   }
