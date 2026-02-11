@@ -1,39 +1,6 @@
-import express, { Application, Request, Response } from "express";
-import authRoutes from "./routes/auth.route";
-import userRoutes from "./routes/user.route";
-import adminUserRoutes from "./routes/admin/user.route";
-import path from "path";
-
-import { connectDatabase } from "./database/mongodb";
+import app from "./app";
 import { PORT } from "./configs";
-
-const app: Application = express();
-
-// middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// Serve static files for profile pictures
-app.use(
-  "/uploads/profile-pictures",
-  express.static(path.join(__dirname, "../public/uploads/profile-pictures"))
-);
-
-
-
-
-
-// Routes
-app.use("/api/auth", authRoutes);
-app.use("/api/users", userRoutes);
-app.use("/api/admin/users", adminUserRoutes);
-
-// Test route
-app.get("/", (req: Request, res: Response) => {
-  return res
-    .status(200)
-    .json({ success: true, message: "Welcome to FanUp API" });
-});
+import { connectDatabase } from "./database/mongodb";
 
 // Start server
 async function startServer() {
