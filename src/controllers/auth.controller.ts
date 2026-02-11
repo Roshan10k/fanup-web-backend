@@ -1,6 +1,10 @@
 import { Request, Response } from "express";
 import { UserService } from "../services/user.service";
-import { CreateUserDtoSchema, LoginUserDtoSchema, UpdateUserDtoSchema } from "../dtos/user.dto";
+import {
+  CreateUserDtoSchema,
+  LoginUserDtoSchema,
+  UpdateUserDtoSchema,
+} from "../dtos/user.dto";
 import { HttpError } from "../errors/http-error";
 
 const userService = new UserService();
@@ -78,7 +82,7 @@ export class AuthController {
 
       const updatedUser = await userService.updateProfilePicture(
         userId,
-        req.file.filename
+        req.file.filename,
       );
       const { password, ...userWithoutPassword } = updatedUser.toObject();
 
@@ -105,9 +109,9 @@ export class AuthController {
   async updateUser(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      
+
       // Verify the user is updating their own profile or is admin
-      if (req.user?._id.toString() !== id && req.user?.role !== 'admin') {
+      if (req.user?._id.toString() !== id && req.user?.role !== "admin") {
         return res.status(403).json({
           success: false,
           message: "Forbidden: Cannot update another user's profile",
@@ -115,12 +119,12 @@ export class AuthController {
       }
 
       const validatedData = UpdateUserDtoSchema.parse(req.body);
-      
+
       // Add profile picture if uploaded
       if (req.file) {
         validatedData.profilePicture = req.file.filename;
       }
-      
+
       const updatedUser = await userService.updateProfile(id, validatedData);
       const { password, ...userWithoutPassword } = updatedUser.toObject();
 
@@ -141,6 +145,43 @@ export class AuthController {
         success: false,
         message: error instanceof Error ? error.message : "Update failed",
       });
+    }
+  }
+
+  async sendResetPasswordEmail(req: Request, res: Response) {
+    try {
+      const email = req.body.email;
+      await userService.sendResetPasswordEmail(email);
+      return res.status(200).json({
+        success: true,
+        message: "If the email is registered, a reset link has been sent.",
+      });
+    } catch (error: Error | any) {
+      return res.status(error.statusCode ?? 500).json({
+        success: false,
+        message: error.message || "Internal Server Error",
+      });
+    }
+  }
+
+  async resetPassword(req: Request, res: Response) {
+    try {
+      const token = req.params.token;
+      const { newPassword } = req.body;
+      await userService.resetPassword(token, newPassword);
+      return res
+        .status(200)
+        .json({
+          success: true,
+          message: "Password has been reset successfully.",
+        });
+    } catch (error: Error | any) {
+      return res
+        .status(error.statusCode ?? 500)
+        .json({
+          success: false,
+          message: error.message || "Internal Server Error",
+        });
     }
   }
 }
