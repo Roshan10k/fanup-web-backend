@@ -23,10 +23,23 @@ export class AdminUserService {
     return newUser;
   }
 
-  // Get all users
-  async getAllUsers() {
-    return await userRepository.getAllUsers();
-  }
+  // Get all users with pagination and optional search
+  async getAllUsers(
+        page?: string, size?: string, search?: string
+    ){
+        const pageNumber = page ? parseInt(page) : 1;
+        const pageSize = size ? parseInt(size) : 10;
+        const {users, total} = await userRepository.getAllUsers(
+            pageNumber, pageSize, search
+        );
+        const pagination = {
+            page: pageNumber,
+            size: pageSize,
+            totalItems: total,
+            totalPages: Math.ceil(total / pageSize)
+        }
+        return {users, pagination};
+    }
 
   // Get user by ID
   async getUserById(id: string) {
@@ -71,14 +84,12 @@ export class AdminUserService {
 
   // Get user statistics
   async getUserStats() {
-    const users = await userRepository.getAllUsers();
-    
-    const stats = {
-      totalUsers: users.length,
-      adminCount: users.filter(u => u.role === "admin").length,
-      userCount: users.filter(u => u.role === "user").length,
-    };
+  const { users } = await userRepository.getAllUsers(1, Number.MAX_SAFE_INTEGER);
 
-    return stats;
-  }
+  return {
+    totalUsers: users.length,
+    adminCount: users.filter(u => u.role === "admin").length,
+    userCount: users.filter(u => u.role === "user").length,
+  };
+}
 }
