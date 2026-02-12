@@ -1,8 +1,10 @@
-import { Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 
 import { UpdateUserDtoSchema, CreateUserDtoSchema } from "../../dtos/user.dto";
 import { HttpError } from "../../errors/http-error";
 import { AdminUserService } from "../../services/admin/adminuser.service";
+import { QueryParams } from "../../types/query.type";
+
 
 const adminUserService = new AdminUserService();
 
@@ -43,29 +45,21 @@ export class AdminUserController {
   }
 
   // Get all users
-  async getAllUsers(req: Request, res: Response) {
-    try {
-      const users = await adminUserService.getAllUsers();
-      
-      // Remove passwords from all users
-      const usersWithoutPasswords = users.map((user) => {
-        const { password, ...userWithoutPassword } = user.toObject();
-        return userWithoutPassword;
-      });
-
-      return res.status(200).json({
-        success: true,
-        message: "Users retrieved successfully",
-        data: usersWithoutPasswords,
-        count: usersWithoutPasswords.length,
-      });
-    } catch (error) {
-      return res.status(500).json({
-        success: false,
-        message: "Failed to retrieve users",
-      });
+  async getAllUsers(req: Request, res: Response, next: NextFunction) {
+        try {
+            const { page, size, search }: QueryParams = req.query;
+            const { users, pagination } = await adminUserService.getAllUsers(
+                page, size, search
+            );
+            return res.status(200).json(
+                { success: true, data: users, pagination: pagination, message: "All Users Retrieved" }
+            );
+        } catch (error: Error | any) {
+            return res.status(error.statusCode ?? 500).json(
+                { success: false, message: error.message || "Internal Server Error" }
+            );
+        }
     }
-  }
 
   // Get single user by ID
   async getUserById(req: Request, res: Response) {
