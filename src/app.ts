@@ -4,6 +4,7 @@ import authRoutes from "./routes/auth.route";
 import userRoutes from "./routes/user.route";
 import adminUserRoutes from "./routes/admin/user.route";
 import matchRoutes from "./routes/match.route";
+import playerRoutes from "./routes/player.route";
 import path from "path";
 
 
@@ -32,6 +33,6 @@ app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/admin/users", adminUserRoutes);
 app.use("/api/matches", matchRoutes);
+app.use("/api/players", playerRoutes);
 
 export default app;
-
