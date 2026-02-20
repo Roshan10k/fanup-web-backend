@@ -32,6 +32,12 @@ const userMongoSchema: Schema = new Schema(
       type: String,
       default: null,
     },
+
+    balance: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
   },
   {
     timestamps: true,

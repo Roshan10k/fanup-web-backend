@@ -5,10 +5,29 @@ import { CreateUserDto, LoginUserDto, UpdateUserDto } from "../dtos/user.dto";
 import jwt from "jsonwebtoken";
 import { CLIENT_URL, JWT_SECRET} from "../configs";
 import { sendEmail } from "../configs/email";
+import { WalletService } from "./wallet.service";
+import mongoose from "mongoose";
+import { ContestEntryModel } from "../models/contest-entry.model";
+import { MatchModel } from "../models/match.model";
 
 const userRepository = new UserRepository();
+const walletService = new WalletService();
 
 export class UserService {
+  private getProfileCompletionScore(input: {
+    hasFullName: boolean;
+    hasEmail: boolean;
+    hasProfilePicture: boolean;
+    hasContestActivity: boolean;
+  }) {
+    let score = 0;
+    if (input.hasFullName) score += 30;
+    if (input.hasEmail) score += 30;
+    if (input.hasProfilePicture) score += 20;
+    if (input.hasContestActivity) score += 20;
+    return Math.min(100, score);
+  }
+
   async registerUser(userData: CreateUserDto) {
     const existingEmail = await userRepository.getUserByEmail(userData.email);
     if (existingEmail) {
@@ -20,7 +39,14 @@ export class UserService {
     userPayload.password = hashedPassword;
 
     const newUser = await userRepository.createUser(userPayload);
-    return newUser;
+    await walletService.applyWelcomeBonusIfEligible(newUser._id.toString());
+
+    const userWithBonus = await userRepository.getUserById(newUser._id.toString());
+    if (!userWithBonus) {
+      throw new HttpError(404, "User not found after registration");
+    }
+
+    return userWithBonus;
   }
 
   async loginUser(loginData: LoginUserDto) {
@@ -38,14 +64,21 @@ export class UserService {
       throw new HttpError(401, "Invalid credentials");
     }
 
+    await walletService.claimDailyLoginBonus(user._id.toString());
+
+    const refreshedUser = await userRepository.getUserById(user._id.toString());
+    if (!refreshedUser) {
+      throw new HttpError(404, "User not found");
+    }
+
      const payload = {
       //what to store in token
-      id: user._id,
-      email: user.email,
-      role: user.role,
+      id: refreshedUser._id,
+      email: refreshedUser.email,
+      role: refreshedUser.role,
     }
     const token = jwt.sign(payload, JWT_SECRET, {expiresIn: '30d'}); //30days
-    return {token, user};
+    return {token, user: refreshedUser};
   }
 
   async updateProfile(userId: string, updateData: UpdateUserDto) {
@@ -72,6 +105,100 @@ export class UserService {
       throw new HttpError(404, "User not found");
     }
     return updatedUser;
+  }
+
+  async getProfileStats(userId: string) {
+    const user = await userRepository.getUserById(userId);
+    if (!user) {
+      throw new HttpError(404, "User not found");
+    }
+
+    const allEntries = await ContestEntryModel.find(
+      { userId: new mongoose.Types.ObjectId(userId) },
+      { matchId: 1, points: 1 }
+    ).lean();
+
+    const contestsJoined = allEntries.length;
+    const teamsCreated = contestsJoined;
+
+    const matchIds = Array.from(
+      new Set(allEntries.map((entry) => entry.matchId.toString()))
+    ).map((id) => new mongoose.Types.ObjectId(id));
+
+    if (!matchIds.length) {
+      return {
+        contestsJoined,
+        teamsCreated,
+        winRate: 0,
+        profileCompletion: this.getProfileCompletionScore({
+          hasFullName: Boolean(user.fullName),
+          hasEmail: Boolean(user.email),
+          hasProfilePicture: Boolean(user.profilePicture),
+          hasContestActivity: false,
+        }),
+      };
+    }
+
+    const completedMatches = await MatchModel.find(
+      { _id: { $in: matchIds }, status: "completed" },
+      { _id: 1 }
+    ).lean();
+
+    const completedMatchIds = completedMatches.map((item) => item._id);
+    const completedMatchIdSet = new Set(
+      completedMatchIds.map((item) => item.toString())
+    );
+
+    const completedEntries = allEntries.filter((entry) =>
+      completedMatchIdSet.has(entry.matchId.toString())
+    );
+
+    let wins = 0;
+    if (completedEntries.length > 0 && completedMatchIds.length > 0) {
+      const topRows = await ContestEntryModel.aggregate<{
+        _id: mongoose.Types.ObjectId;
+        maxPoints: number;
+      }>([
+        {
+          $match: {
+            matchId: { $in: completedMatchIds },
+          },
+        },
+        {
+          $group: {
+            _id: "$matchId",
+            maxPoints: { $max: "$points" },
+          },
+        },
+      ]);
+
+      const topPointByMatch = new Map(
+        topRows.map((row) => [row._id.toString(), row.maxPoints])
+      );
+
+      for (const entry of completedEntries) {
+        const maxPoints = topPointByMatch.get(entry.matchId.toString());
+        if (typeof maxPoints === "number" && entry.points >= maxPoints) {
+          wins += 1;
+        }
+      }
+    }
+
+    const winRate = completedEntries.length
+      ? Math.round((wins / completedEntries.length) * 100)
+      : 0;
+
+    return {
+      contestsJoined,
+      teamsCreated,
+      winRate,
+      profileCompletion: this.getProfileCompletionScore({
+        hasFullName: Boolean(user.fullName),
+        hasEmail: Boolean(user.email),
+        hasProfilePicture: Boolean(user.profilePicture),
+        hasContestActivity: contestsJoined > 0,
+      }),
+    };
   }
 
   async sendResetPasswordEmail(email?: string) {
@@ -111,4 +238,3 @@ export class UserService {
 
 
 }
-

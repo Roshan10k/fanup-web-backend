@@ -7,6 +7,7 @@ export interface IUserRepository {
 
   getUserById(id: string): Promise<IUser | null>;
   updateUser(id: string, updateData: Partial<IUser>): Promise<IUser | null>;
+  incrementBalance(id: string, amount: number): Promise<IUser | null>;
   deleteUser(id: string): Promise<boolean>;
   getAllUsers(
         page: number, size: number, search?: string
@@ -56,6 +57,14 @@ export class UserRepository implements IUserRepository {
     return await UserModel.findByIdAndUpdate(id, updateData, {
       new: true,
     });
+  }
+
+  async incrementBalance(id: string, amount: number): Promise<IUser | null> {
+    return await UserModel.findByIdAndUpdate(
+      id,
+      { $inc: { balance: amount } },
+      { new: true }
+    );
   }
 
   async deleteUser(id: string): Promise<boolean> {
