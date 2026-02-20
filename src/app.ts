@@ -5,6 +5,8 @@ import userRoutes from "./routes/user.route";
 import adminUserRoutes from "./routes/admin/user.route";
 import matchRoutes from "./routes/match.route";
 import playerRoutes from "./routes/player.route";
+import walletRoutes from "./routes/wallet.route";
+import leaderboardRoutes from "./routes/leaderboard.route";
 import path from "path";
 
 
@@ -34,5 +36,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/admin/users", adminUserRoutes);
 app.use("/api/matches", matchRoutes);
 app.use("/api/players", playerRoutes);
+app.use("/api/wallet", walletRoutes);
+app.use("/api/leaderboard", leaderboardRoutes);
 
 export default app;
