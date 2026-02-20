@@ -71,4 +71,32 @@ export class UserController {
       });
     }
   }
+
+  async getProfileStats(req: Request, res: Response) {
+    try {
+      if (!req.user) {
+        throw new HttpError(401, "User not authenticated");
+      }
+
+      const stats = await userService.getProfileStats(req.user._id.toString());
+
+      return res.status(200).json({
+        success: true,
+        message: "Profile stats retrieved successfully",
+        data: stats,
+      });
+    } catch (error) {
+      if (error instanceof HttpError) {
+        return res.status(error.statusCode).json({
+          success: false,
+          message: error.message,
+        });
+      }
+
+      return res.status(500).json({
+        success: false,
+        message: "Failed to retrieve profile stats",
+      });
+    }
+  }
 }

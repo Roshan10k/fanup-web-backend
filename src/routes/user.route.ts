@@ -7,6 +7,7 @@ const userController = new UserController();
 
 // Protected routes - require authentication
 router.get("/profile", authorizedMiddleware, userController.getProfile);
+router.get("/profile/stats", authorizedMiddleware, userController.getProfileStats);
 router.put("/profile", authorizedMiddleware, userController.updateProfile);
 
 export default router;
