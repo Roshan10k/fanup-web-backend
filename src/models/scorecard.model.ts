@@ -20,6 +20,23 @@ const topPerformerSchema = new Schema(
   { _id: false }
 );
 
+const playerPerformanceSchema = new Schema(
+  {
+    playerId: { type: String, default: null },
+    playerName: { type: String, required: true, trim: true },
+    teamShortName: { type: String, required: true, trim: true },
+    runs: { type: Number, default: 0, min: 0 },
+    wickets: { type: Number, default: 0, min: 0 },
+    fours: { type: Number, default: 0, min: 0 },
+    sixes: { type: Number, default: 0, min: 0 },
+    maidens: { type: Number, default: 0, min: 0 },
+    catches: { type: Number, default: 0, min: 0 },
+    stumpings: { type: Number, default: 0, min: 0 },
+    runOuts: { type: Number, default: 0, min: 0 },
+  },
+  { _id: false }
+);
+
 const scorecardMongoSchema: Schema = new Schema(
   {
     matchId: {
@@ -32,6 +49,7 @@ const scorecardMongoSchema: Schema = new Schema(
     innings: { type: [teamInningsSchema], required: true, default: [] },
     topBatters: { type: [topPerformerSchema], default: [] },
     topBowlers: { type: [topPerformerSchema], default: [] },
+    playerPerformances: { type: [playerPerformanceSchema], default: [] },
     resultText: { type: String, default: null },
   },
   {

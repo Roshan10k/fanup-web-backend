@@ -13,11 +13,26 @@ const TopPerformerSchema = z.object({
   performance: z.string().min(1),
 });
 
+const PlayerPerformanceSchema = z.object({
+  playerId: z.string().min(1).optional(),
+  playerName: z.string().min(1),
+  teamShortName: z.string().min(1),
+  runs: z.number().min(0).default(0),
+  wickets: z.number().min(0).default(0),
+  fours: z.number().min(0).default(0),
+  sixes: z.number().min(0).default(0),
+  maidens: z.number().min(0).default(0),
+  catches: z.number().min(0).default(0),
+  stumpings: z.number().min(0).default(0),
+  runOuts: z.number().min(0).default(0),
+});
+
 export const ScorecardSchema = z.object({
   matchId: z.string().min(1),
   innings: z.array(TeamInningsSchema).min(1),
   topBatters: z.array(TopPerformerSchema).default([]),
   topBowlers: z.array(TopPerformerSchema).default([]),
+  playerPerformances: z.array(PlayerPerformanceSchema).default([]),
   resultText: z.string().optional(),
 });
 
