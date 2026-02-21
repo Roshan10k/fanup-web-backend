@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "nodemon --exec ts-node src/index.ts",
     "test": "jest --verbose --detectOpenHandles",
-    "seed:fantasy": "ts-node src/scripts/seed-fantasy-data.ts"
+    "seed:fantasy": "ts-node src/scripts/seed.ts"
   },
   "keywords": [],
   "author": "",
