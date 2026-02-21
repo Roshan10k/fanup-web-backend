@@ -5,6 +5,43 @@ import { MatchService } from "../services/match.service";
 const matchService = new MatchService();
 
 export class MatchController {
+  async listMatches(req: Request, res: Response) {
+    try {
+      const { page, size, league, status } = req.query as {
+        page?: string;
+        size?: string;
+        league?: string;
+        status?: string;
+      };
+
+      const { matches, pagination } = await matchService.listMatches({
+        page,
+        size,
+        league,
+        status,
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: "Matches retrieved successfully",
+        data: matches,
+        pagination,
+      });
+    } catch (error) {
+      if (error instanceof HttpError) {
+        return res.status(error.statusCode).json({
+          success: false,
+          message: error.message,
+        });
+      }
+
+      return res.status(500).json({
+        success: false,
+        message: "Failed to retrieve matches",
+      });
+    }
+  }
+
   async getCompletedMatches(req: Request, res: Response) {
     try {
       const { page, size, league } = req.query as {
