@@ -3,7 +3,7 @@ import { z } from "zod";
 export const SportEnum = z.enum(["cricket"]);
 export const MatchStatusEnum = z.enum([
   "upcoming",
-  "live",
+  "locked",
   "completed",
   "abandoned",
 ]);

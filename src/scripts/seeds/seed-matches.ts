@@ -2,7 +2,7 @@ import { MatchModel } from "../../models/match.model";
 import { ScorecardModel } from "../../models/scorecard.model";
 import { PlayerModel } from "../../models/player.model";
 
-type FixtureStatus = "upcoming" | "live" | "completed";
+type FixtureStatus = "upcoming" | "completed";
 
 type TopPerformer = {
   playerName: string;
@@ -159,79 +159,54 @@ const COMPLETED_MATCHES: Fixture[] = [
   },
 ];
 
-const LIVE_MATCHES: Fixture[] = [
-  {
-    externalMatchId: "WT20C-LIVE-001",
-    teamA: { name: "India", shortName: "IND" },
-    teamB: { name: "England", shortName: "ENG" },
-    venue: "Eden Gardens",
-    startTime: new Date("2026-02-20T14:00:00.000Z"),
-    summary: "Live: England chasing",
-    scorecard: {
-      innings: [
-        { teamShortName: "IND", runs: 174, wickets: 7, overs: 20 },
-        { teamShortName: "ENG", runs: 121, wickets: 4, overs: 14.2 },
-      ],
-      topBatters: [
-        { playerName: "Virat Kohli", teamShortName: "IND", performance: "67 (45)" },
-        { playerName: "Phil Salt", teamShortName: "ENG", performance: "42 (28)" },
-        { playerName: "Hardik Pandya", teamShortName: "IND", performance: "30 (18)" },
-      ],
-      topBowlers: [
-        { playerName: "Jasprit Bumrah", teamShortName: "IND", performance: "2/19" },
-        { playerName: "Adil Rashid", teamShortName: "ENG", performance: "2/27" },
-      ],
-      resultText: "Live",
-    },
-  },
-  {
-    externalMatchId: "WT20C-LIVE-002",
-    teamA: { name: "Australia", shortName: "AUS" },
-    teamB: { name: "Pakistan", shortName: "PAK" },
-    venue: "Melbourne Cricket Ground",
-    startTime: new Date("2026-02-20T17:30:00.000Z"),
-    summary: "Live: Australia batting",
-    scorecard: {
-      innings: [
-        { teamShortName: "AUS", runs: 98, wickets: 3, overs: 11.4 },
-        { teamShortName: "PAK", runs: 0, wickets: 0, overs: 0 },
-      ],
-      topBatters: [
-        { playerName: "Travis Head", teamShortName: "AUS", performance: "39 (24)" },
-        { playerName: "Glenn Maxwell", teamShortName: "AUS", performance: "24 (14)" },
-      ],
-      topBowlers: [
-        { playerName: "Shaheen Afridi", teamShortName: "PAK", performance: "1/21" },
-      ],
-      resultText: "Live",
-    },
-  },
-];
-
 const UPCOMING_MATCHES: Fixture[] = [
   {
     externalMatchId: "WT20C-UPC-001",
     teamA: { name: "New Zealand", shortName: "NZ" },
     teamB: { name: "South Africa", shortName: "SA" },
     venue: "Wankhede Stadium",
-    startTime: new Date("2026-02-21T14:00:00.000Z"),
-    summary: "Starts in 18h",
+    startTime: new Date("2026-03-01T14:00:00.000Z"),
+    summary: "Super 8 clash",
   },
   {
     externalMatchId: "WT20C-UPC-002",
     teamA: { name: "India", shortName: "IND" },
     teamB: { name: "Australia", shortName: "AUS" },
     venue: "Narendra Modi Stadium",
-    startTime: new Date("2026-02-22T14:00:00.000Z"),
-    summary: "Starts tomorrow",
+    startTime: new Date("2026-03-02T14:00:00.000Z"),
+    summary: "High-intensity evening fixture",
   },
   {
     externalMatchId: "WT20C-UPC-003",
     teamA: { name: "England", shortName: "ENG" },
     teamB: { name: "Pakistan", shortName: "PAK" },
     venue: "Trent Bridge",
-    startTime: new Date("2026-02-23T17:00:00.000Z"),
-    summary: "Starts in 2 days",
+    startTime: new Date("2026-03-03T17:00:00.000Z"),
+    summary: "Powerplay-heavy contest expected",
+  },
+  {
+    externalMatchId: "WT20C-UPC-004",
+    teamA: { name: "South Africa", shortName: "SA" },
+    teamB: { name: "India", shortName: "IND" },
+    venue: "Arun Jaitley Stadium",
+    startTime: new Date("2026-03-04T14:00:00.000Z"),
+    summary: "Day game under dry conditions",
+  },
+  {
+    externalMatchId: "WT20C-UPC-005",
+    teamA: { name: "Australia", shortName: "AUS" },
+    teamB: { name: "New Zealand", shortName: "NZ" },
+    venue: "Sydney Cricket Ground",
+    startTime: new Date("2026-03-05T08:30:00.000Z"),
+    summary: "Trans-Tasman rivalry fixture",
+  },
+  {
+    externalMatchId: "WT20C-UPC-006",
+    teamA: { name: "Pakistan", shortName: "PAK" },
+    teamB: { name: "South Africa", shortName: "SA" },
+    venue: "Gaddafi Stadium",
+    startTime: new Date("2026-03-06T15:00:00.000Z"),
+    summary: "Late-stage group decider",
   },
 ];
 
@@ -256,7 +231,7 @@ const buildPlayerPerformances = (
   status: FixtureStatus,
   players: Array<{ _id: unknown; fullName: string; teamShortName: string; role: string }>
 ) => {
-  const intensity = status === "live" ? 0.65 : 1;
+  const intensity = 1;
   const byName = new Map(
     players.map((player) => [
       player.fullName,
@@ -336,11 +311,10 @@ export async function seedMatches(input?: { sport?: string; league?: string }) {
 
   const fixtures = [
     ...COMPLETED_MATCHES.map((item) => ({ ...item, status: "completed" as const })),
-    ...LIVE_MATCHES.map((item) => ({ ...item, status: "live" as const })),
     ...UPCOMING_MATCHES.map((item) => ({ ...item, status: "upcoming" as const })),
   ];
 
-  console.log(`Seeding ${fixtures.length} matches (completed/live/upcoming)...`);
+  console.log(`Seeding ${fixtures.length} matches (completed/upcoming)...`);
 
   for (const item of fixtures) {
     try {
