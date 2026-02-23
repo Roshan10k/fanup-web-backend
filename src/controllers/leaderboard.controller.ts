@@ -2,7 +2,6 @@ import { Request, Response } from "express";
 import { HttpError } from "../errors/http-error";
 import { LeaderboardService } from "../services/leaderboard.service";
 import { WalletService } from "../services/wallet.service";
-import { liveContestStreamService } from "../services/live-contest-stream.service";
 
 const leaderboardService = new LeaderboardService();
 const walletService = new WalletService();
@@ -11,10 +10,8 @@ export class LeaderboardController {
   async listMatchContests(req: Request, res: Response) {
     try {
       const statusParam = String(req.query.status || "completed");
-      const status: "upcoming" | "live" | "completed" =
-        statusParam === "upcoming" || statusParam === "live"
-          ? statusParam
-          : "completed";
+      const status: "upcoming" | "completed" =
+        statusParam === "upcoming" ? "upcoming" : "completed";
       const contests = await leaderboardService.listMatchContests(status);
 
       return res.status(200).json({
@@ -94,7 +91,6 @@ export class LeaderboardController {
       });
 
       await leaderboardService.refreshMatchEntryPoints(matchId);
-      await liveContestStreamService.publishLeaderboardSnapshot(matchId);
 
       const walletSummary = await walletService.getSummary(userId);
 
@@ -162,7 +158,6 @@ export class LeaderboardController {
 
       const { matchId } = req.params;
       await leaderboardService.deleteMyEntry(matchId, userId);
-      await liveContestStreamService.publishLeaderboardSnapshot(matchId);
 
       return res.status(200).json({
         success: true,
@@ -183,26 +178,4 @@ export class LeaderboardController {
     }
   }
 
-  async streamMatchContestLive(req: Request, res: Response) {
-    const { matchId } = req.params;
-    if (!matchId) {
-      return res.status(400).json({
-        success: false,
-        message: "matchId is required",
-      });
-    }
-
-    res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache, no-transform");
-    res.setHeader("Connection", "keep-alive");
-
-    liveContestStreamService.subscribe(matchId, res);
-    void liveContestStreamService.publishLeaderboardSnapshot(matchId).catch(() => {
-      // Keep stream connection open even when initial snapshot is unavailable.
-    });
-
-    req.on("close", () => {
-      liveContestStreamService.unsubscribe(matchId, res);
-    });
-  }
 }

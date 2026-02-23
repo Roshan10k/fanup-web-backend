@@ -7,7 +7,7 @@ import { PlayerModel } from "../models/player.model";
 import { HttpError } from "../errors/http-error";
 import { WalletService } from "./wallet.service";
 
-type ContestStatus = "upcoming" | "live" | "completed";
+type ContestStatus = "upcoming" | "completed";
 
 interface LeaderRow {
   userId: string;
@@ -49,6 +49,11 @@ const parseWickets = (value: string) => {
 };
 
 const roundPoints = (value: number) => Math.max(0, Math.round(value * 10) / 10);
+const scoreSeed = (value: string) =>
+  Array.from(value).reduce(
+    (sum, ch, index) => sum + ch.charCodeAt(0) * (index + 1),
+    0
+  );
 
 const buildPointsByPlayerName = (scorecard: {
   playerPerformances?: Array<{
@@ -138,6 +143,32 @@ const calculateContestPointsFromMaps = (
   return roundPoints(total);
 };
 
+const calculateContestPointsFromFallback = (
+  entry: Pick<IContestEntry, "playerIds" | "captainId" | "viceCaptainId">,
+  matchId: string
+) => {
+  let total = 0;
+
+  for (const playerId of entry.playerIds || []) {
+    const seed = scoreSeed(`${matchId}:${String(playerId)}`);
+    const base = 8 + (seed % 53);
+
+    if (String(playerId) === String(entry.captainId || "")) {
+      total += base * 2;
+      continue;
+    }
+
+    if (String(playerId) === String(entry.viceCaptainId || "")) {
+      total += base * 1.5;
+      continue;
+    }
+
+    total += base;
+  }
+
+  return roundPoints(total);
+};
+
 export class LeaderboardService {
   async listMatchContests(status: ContestStatus) {
     const matchFilter = { status };
@@ -182,8 +213,12 @@ export class LeaderboardService {
       throw new HttpError(404, "Match not found");
     }
 
-    if (match.status !== "completed" && match.status !== "upcoming" && match.status !== "live") {
-      throw new HttpError(400, "Leaderboard supports upcoming, live, or completed matches");
+    if (match.status !== "completed" && match.status !== "upcoming" && match.status !== "locked") {
+      throw new HttpError(400, "Leaderboard supports upcoming, locked, or completed matches");
+    }
+
+    if (match.status === "upcoming" || match.status === "locked") {
+      await this.refreshMatchEntryPoints(matchId);
     }
 
     const entries = await ContestEntryModel.find({ matchId: match._id })
@@ -279,22 +314,37 @@ export class LeaderboardService {
       throw new HttpError(404, "Match not found");
     }
 
-    if (!entries.length || !scorecard) {
+    if (!entries.length) {
       return { updatedCount: 0 };
     }
 
-    const allPlayerIds = entries.flatMap((entry) => entry.playerIds || []);
-    const playerNameById = await this.buildPlayerNameMap(allPlayerIds);
-    const pointsByName = buildPointsByPlayerName(scorecard);
-
     let updatedCount = 0;
-    for (const entry of entries) {
-      const recalculated = calculateContestPointsFromMaps(entry, pointsByName, playerNameById);
-      if (entry.points !== recalculated) {
-        entry.points = recalculated;
-        await entry.save();
-        updatedCount += 1;
+    if (scorecard) {
+      const allPlayerIds = entries.flatMap((entry) => entry.playerIds || []);
+      const playerNameById = await this.buildPlayerNameMap(allPlayerIds);
+      const pointsByName = buildPointsByPlayerName(scorecard);
+
+      for (const entry of entries) {
+        const recalculated = calculateContestPointsFromMaps(entry, pointsByName, playerNameById);
+        if (entry.points !== recalculated) {
+          entry.points = recalculated;
+          await entry.save();
+          updatedCount += 1;
+        }
       }
+      return { updatedCount };
+    }
+
+    if (match.status === "upcoming") {
+      for (const entry of entries) {
+        const recalculated = calculateContestPointsFromFallback(entry, matchId);
+        if (entry.points !== recalculated) {
+          entry.points = recalculated;
+          await entry.save();
+          updatedCount += 1;
+        }
+      }
+      return { updatedCount };
     }
 
     return { updatedCount };
@@ -330,8 +380,18 @@ export class LeaderboardService {
       throw new HttpError(404, "Match not found");
     }
 
-    if (match.status !== "upcoming" && match.status !== "completed" && match.status !== "live") {
-      throw new HttpError(400, "Contest entry is not allowed for this match status");
+    if (!match.isEditable) {
+      throw new HttpError(
+        400,
+        "This match is locked. No entries or edits are allowed."
+      );
+    }
+
+    if (match.status !== "upcoming") {
+      throw new HttpError(
+        400,
+        "Contest entry is allowed only for upcoming matches"
+      );
     }
 
     const existingEntry = await ContestEntryModel.findOne({
@@ -341,16 +401,24 @@ export class LeaderboardService {
 
     const playerNameById = await this.buildPlayerNameMap(input.playerIds);
     const scorecard = await ScorecardModel.findOne({ matchId: match._id.toString() }).lean();
-    const pointsByName = buildPointsByPlayerName(scorecard || {});
-    const calculatedPoints = calculateContestPointsFromMaps(
-      {
-        playerIds: input.playerIds,
-        captainId: input.captainId,
-        viceCaptainId: input.viceCaptainId,
-      },
-      pointsByName,
-      playerNameById
-    );
+    const calculatedPoints = scorecard
+      ? calculateContestPointsFromMaps(
+          {
+            playerIds: input.playerIds,
+            captainId: input.captainId,
+            viceCaptainId: input.viceCaptainId,
+          },
+          buildPointsByPlayerName(scorecard),
+          playerNameById
+        )
+      : calculateContestPointsFromFallback(
+          {
+            playerIds: input.playerIds,
+            captainId: input.captainId,
+            viceCaptainId: input.viceCaptainId,
+          },
+          input.matchId
+        );
 
     const payload = {
       teamId: input.teamId.trim(),
@@ -447,6 +515,19 @@ export class LeaderboardService {
   async deleteMyEntry(matchId: string, userId: string) {
     if (!mongoose.Types.ObjectId.isValid(matchId)) {
       throw new HttpError(400, "Invalid match id");
+    }
+
+    const match = await MatchModel.findById(matchId).lean();
+    if (!match) {
+      throw new HttpError(404, "Match not found");
+    }
+
+    if (!match.isEditable) {
+      throw new HttpError(400, "This match is locked. Entry cannot be deleted.");
+    }
+
+    if (match.status !== "upcoming") {
+      throw new HttpError(400, "Contest entry cannot be deleted after match completion");
     }
 
     const deleted = await ContestEntryModel.findOneAndDelete({

@@ -6,7 +6,6 @@ const router = Router();
 const leaderboardController = new LeaderboardController();
 
 router.get("/contests", leaderboardController.listMatchContests);
-router.get("/contests/:matchId/live", leaderboardController.streamMatchContestLive);
 router.get("/my-entries", authorizedMiddleware, leaderboardController.getMyEntries);
 router.post(
   "/contests/:matchId/entry",
