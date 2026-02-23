@@ -27,8 +27,13 @@ const matchMongoSchema: Schema = new Schema(
     startTime: { type: Date, required: true, index: true },
     status: {
       type: String,
-      enum: ["upcoming", "live", "completed", "abandoned"],
+      enum: ["upcoming", "locked", "completed", "abandoned"],
       default: "upcoming",
+      index: true,
+    },
+    isEditable: {
+      type: Boolean,
+      default: true,
       index: true,
     },
     result: {

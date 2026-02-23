@@ -23,6 +23,7 @@ export const MatchSchema = z.object({
   venue: z.string().optional(),
   startTime: z.date(),
   status: MatchStatusEnum.default("upcoming"),
+  isEditable: z.boolean().default(true),
   result: MatchResultEnum.optional(),
   winnerTeamShortName: z.string().optional(),
   summary: z.string().optional(),

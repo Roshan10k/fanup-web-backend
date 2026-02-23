@@ -101,4 +101,39 @@ export class MatchController {
       });
     }
   }
+
+  async completeMatchAndSettle(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const { result, winnerTeamShortName, summary } = req.body as {
+        result?: "team_a" | "team_b" | "draw" | "no_result";
+        winnerTeamShortName?: string;
+        summary?: string;
+      };
+
+      const output = await matchService.completeMatchAndSettle(id, {
+        result,
+        winnerTeamShortName,
+        summary,
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: output.message,
+        data: output,
+      });
+    } catch (error) {
+      if (error instanceof HttpError) {
+        return res.status(error.statusCode).json({
+          success: false,
+          message: error.message,
+        });
+      }
+
+      return res.status(500).json({
+        success: false,
+        message: "Failed to complete and settle match",
+      });
+    }
+  }
 }
