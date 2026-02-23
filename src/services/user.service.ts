@@ -17,14 +17,14 @@ export class UserService {
   private getProfileCompletionScore(input: {
     hasFullName: boolean;
     hasEmail: boolean;
+    hasPhone: boolean;
     hasProfilePicture: boolean;
-    hasContestActivity: boolean;
   }) {
     let score = 0;
-    if (input.hasFullName) score += 30;
-    if (input.hasEmail) score += 30;
-    if (input.hasProfilePicture) score += 20;
-    if (input.hasContestActivity) score += 20;
+    if (input.hasFullName) score += 25;
+    if (input.hasEmail) score += 25;
+    if (input.hasPhone) score += 25;
+    if (input.hasProfilePicture) score += 25;
     return Math.min(100, score);
   }
 
@@ -113,6 +113,12 @@ export class UserService {
       throw new HttpError(404, "User not found");
     }
 
+    const missingFields: string[] = [];
+    if (!user.fullName) missingFields.push("Full name");
+    if (!user.email) missingFields.push("Email");
+    if (!user.phone) missingFields.push("Phone number");
+    if (!user.profilePicture) missingFields.push("Profile picture");
+
     const allEntries = await ContestEntryModel.find(
       { userId: new mongoose.Types.ObjectId(userId) },
       { matchId: 1, points: 1 }
@@ -133,9 +139,10 @@ export class UserService {
         profileCompletion: this.getProfileCompletionScore({
           hasFullName: Boolean(user.fullName),
           hasEmail: Boolean(user.email),
+          hasPhone: Boolean(user.phone),
           hasProfilePicture: Boolean(user.profilePicture),
-          hasContestActivity: false,
         }),
+        missingFields,
       };
     }
 
@@ -195,9 +202,10 @@ export class UserService {
       profileCompletion: this.getProfileCompletionScore({
         hasFullName: Boolean(user.fullName),
         hasEmail: Boolean(user.email),
+        hasPhone: Boolean(user.phone),
         hasProfilePicture: Boolean(user.profilePicture),
-        hasContestActivity: contestsJoined > 0,
       }),
+      missingFields,
     };
   }
 

@@ -17,13 +17,14 @@ export const CreateUserDtoSchema = UserSchema.pick({
 
 export type CreateUserDto = z.infer<typeof CreateUserDtoSchema>;
 
-//Update User DTO
+
 // Update User DTO
 export const UpdateUserDtoSchema = UserSchema.pick({
   fullName: true,
   email: true,
   password: true,
   profilePicture: true,
+  phone: true,
 }).partial();
 
 export type UpdateUserDto = z.infer<typeof UpdateUserDtoSchema>;

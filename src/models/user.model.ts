@@ -33,6 +33,12 @@ const userMongoSchema: Schema = new Schema(
       default: null,
     },
 
+    phone: {
+      type: String,
+      default: null,
+      trim: true,
+    },
+
     balance: {
       type: Number,
       default: 0,
