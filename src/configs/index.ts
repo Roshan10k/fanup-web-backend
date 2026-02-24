@@ -24,5 +24,3 @@ export const EMAIL_USER: string =
 
 export const EMAIL_PASS: string =
     process.env.EMAIL_PASS || 'password';
-
-

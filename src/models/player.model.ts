@@ -15,6 +15,16 @@ const playerMongoSchema: Schema = new Schema(
     credit: { type: Number, required: true, min: 0, max: 15 },
     imageUrl: { type: String, default: null },
     isPlaying: { type: Boolean, default: true },
+    cricApiId: { type: String, default: null, index: true, sparse: true },
+    stats: {
+      battingAverage: { type: Number, default: null },
+      strikeRate: { type: Number, default: null },
+      bowlingEconomy: { type: Number, default: null },
+      wickets: { type: Number, default: null },
+      runs: { type: Number, default: null },
+      hundreds: { type: Number, default: null },
+      fifties: { type: Number, default: null },
+    },
   },
   {
     timestamps: true,

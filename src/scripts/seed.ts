@@ -1,19 +1,24 @@
 import mongoose from "mongoose";
 import { connectDatabase } from "../database/mongodb";
-import {
-  DEFAULT_SEED_LEAGUE,
-  DEFAULT_SEED_SPORT,
-  seedFantasyRules,
-} from "./seeds/seed-fantasy-rules";
-import { seedPlayers } from "./seeds/seed-players";
-import { seedMatches } from "./seeds/seed-matches";
+import { seedFantasyRules } from "./seeds/seed-fantasy-rules";
+import { seedIPL2024Players } from "./seeds/seed-ipl2024-players";
+import { seedIPL2024Matches } from "./seeds/seed-ipl2024-matches";
 
 async function main() {
   await connectDatabase();
-  await seedFantasyRules({ sport: DEFAULT_SEED_SPORT, league: DEFAULT_SEED_LEAGUE });
-  await seedPlayers();
-  await seedMatches({ sport: DEFAULT_SEED_SPORT, league: DEFAULT_SEED_LEAGUE });
+  console.log("✅ Connected to database");
+
+  await seedFantasyRules({ sport: "cricket", league: "Indian Premier League" });
+  
+  // Use static IPL 2024 players - no API calls!
+  const playerResult = await seedIPL2024Players();
+  console.log(`\n📊 Players: ${playerResult.upserted} upserted, ${playerResult.errors} errors`);
+
+  // Use static IPL 2024 matches with full scorecards
+  await seedIPL2024Matches();
+  
   console.log("\n✅ Fantasy seed completed successfully.");
+  console.log("📡 API calls: 0 (fully offline)\n");
 }
 
 main()
