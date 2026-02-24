@@ -287,7 +287,7 @@ export class MatchService {
       throw new HttpError(400, "Cannot lock an abandoned match");
     }
 
-    if (!match.isEditable) {
+    if (match.isEditable === false)  {
       throw new HttpError(400, "Match is already locked");
     }
 

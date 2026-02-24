@@ -380,7 +380,7 @@ export class LeaderboardService {
       throw new HttpError(404, "Match not found");
     }
 
-    if (!match.isEditable) {
+    if (match.isEditable === false)  {
       throw new HttpError(
         400,
         "This match is locked. No entries or edits are allowed."
