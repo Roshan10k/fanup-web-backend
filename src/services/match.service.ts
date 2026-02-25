@@ -5,9 +5,11 @@ import { HttpError } from "../errors/http-error";
 import { ContestEntryModel } from "../models/contest-entry.model";
 import { WalletService } from "./wallet.service";
 import { LeaderboardService } from "./leaderboard.service";
+import { NotificationService } from "./notification.service";
 
 const walletService = new WalletService();
 const leaderboardService = new LeaderboardService();
+const notificationService = new NotificationService();
 
 const getPrizeByRank = (rank: number) => {
   if (rank === 1) return 1000;
@@ -181,6 +183,7 @@ export class MatchService {
         const entry = entries[index];
         const userId = entry.userId.toString();
         let credited = false;
+        const userRank = rankStart; // Use rankStart as user's rank (tied users share the same rank)
 
         if (perUserPrize > 0) {
           const txResult = await walletService.createBalanceTransaction({
@@ -196,10 +199,30 @@ export class MatchService {
           if (credited) {
             creditedCount += 1;
             totalPrizeDistributed += perUserPrize;
+
+            // Create notification for prize credited
+            await notificationService.createPrizeCreditedNotification(
+              userId,
+              matchId,
+              match.teamA.shortName,
+              match.teamB.shortName,
+              perUserPrize,
+              userRank
+            );
           } else {
             skippedCount += 1;
           }
         }
+
+        // Create match completed notification for all participants
+        await notificationService.createMatchCompletedNotification(
+          userId,
+          matchId,
+          match.teamA.shortName,
+          match.teamB.shortName,
+          userRank,
+          entry.points
+        );
 
         payouts.push({
           userId,

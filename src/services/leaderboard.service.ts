@@ -6,6 +6,7 @@ import { ScorecardModel } from "../models/scorecard.model";
 import { PlayerModel } from "../models/player.model";
 import { HttpError } from "../errors/http-error";
 import { WalletService } from "./wallet.service";
+import { NotificationService } from "./notification.service";
 
 type ContestStatus = "upcoming" | "completed";
 
@@ -29,6 +30,7 @@ const CATCH_POINT = 8;
 const STUMPING_POINT = 12;
 const RUN_OUT_POINT = 6;
 const walletService = new WalletService();
+const notificationService = new NotificationService();
 
 const getPrizeByRank = (rank: number) => {
   if (rank === 1) return 1000;
@@ -441,6 +443,15 @@ export class LeaderboardService {
         userId: new mongoose.Types.ObjectId(input.userId),
         ...payload,
       });
+
+      // Create notification for contest joined
+      await notificationService.createContestJoinedNotification(
+        input.userId,
+        input.matchId,
+        match.teamA?.shortName || match.teamA?.name || "Team A",
+        match.teamB?.shortName || match.teamB?.name || "Team B",
+        payload.teamName
+      );
 
       return {
         created: true,
