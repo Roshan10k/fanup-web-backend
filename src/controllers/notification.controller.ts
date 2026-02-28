@@ -1,10 +1,82 @@
 import { Request, Response } from "express";
+import { RegisterDeviceTokenDtoSchema } from "../dtos/device-token.dto";
 import { HttpError } from "../errors/http-error";
 import { NotificationService } from "../services/notification.service";
+import { PushService } from "../services/push.service";
 
 const notificationService = new NotificationService();
+const pushService = new PushService();
 
 export class NotificationController {
+  async registerDeviceToken(req: Request, res: Response) {
+    try {
+      const userId = req.user?._id.toString();
+      if (!userId) {
+        throw new HttpError(401, "User not authenticated");
+      }
+
+      const validatedData = RegisterDeviceTokenDtoSchema.parse(req.body);
+      const result = await pushService.registerDeviceToken({
+        userId,
+        token: validatedData.token,
+        platform: validatedData.platform,
+        deviceId: validatedData.deviceId,
+        appVersion: validatedData.appVersion,
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: "Device token registered successfully",
+        data: result,
+      });
+    } catch (error: unknown) {
+      if (error instanceof HttpError) {
+        return res.status(error.statusCode).json({
+          success: false,
+          message: error.message,
+        });
+      }
+
+      return res.status(400).json({
+        success: false,
+        message: error instanceof Error ? error.message : "Failed to register device token",
+      });
+    }
+  }
+
+  async unregisterDeviceToken(req: Request, res: Response) {
+    try {
+      const userId = req.user?._id.toString();
+      if (!userId) {
+        throw new HttpError(401, "User not authenticated");
+      }
+
+      const token = String(req.params.token || "").trim();
+      if (!token) {
+        throw new HttpError(400, "Token is required");
+      }
+
+      const result = await pushService.unregisterDeviceToken(userId, token);
+      return res.status(200).json({
+        success: true,
+        message: "Device token unregistered successfully",
+        data: result,
+      });
+    } catch (error: unknown) {
+      if (error instanceof HttpError) {
+        return res.status(error.statusCode).json({
+          success: false,
+          message: error.message,
+        });
+      }
+
+      return res.status(500).json({
+        success: false,
+        message: "Failed to unregister device token",
+      });
+    }
+  }
+
   async getNotifications(req: Request, res: Response) {
     try {
       const userId = req.user?._id.toString();

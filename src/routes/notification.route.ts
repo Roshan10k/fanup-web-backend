@@ -5,6 +5,12 @@ import { NotificationController } from "../controllers/notification.controller";
 const router = Router();
 const notificationController = new NotificationController();
 
+// Register or refresh push device token for authenticated user
+router.post("/devices/register", authorizedMiddleware, notificationController.registerDeviceToken);
+
+// Unregister device token for authenticated user
+router.delete("/devices/:token", authorizedMiddleware, notificationController.unregisterDeviceToken);
+
 // Get all notifications for the authenticated user
 router.get("/", authorizedMiddleware, notificationController.getNotifications);
 
