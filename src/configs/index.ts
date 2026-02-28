@@ -24,3 +24,5 @@ export const EMAIL_USER: string =
 
 export const EMAIL_PASS: string =
     process.env.EMAIL_PASS || 'password';
+
+export const FCM_SERVER_KEY: string = process.env.FCM_SERVER_KEY || "";
