@@ -6,6 +6,13 @@ import bcryptjs from "bcryptjs";
 const userRepository = new UserRepository();
 
 export class AdminUserService {
+  private parsePositiveInteger(value: string | undefined, fallback: number) {
+    if (!value) return fallback;
+    const parsed = Number.parseInt(value, 10);
+    if (!Number.isFinite(parsed) || parsed < 1) return fallback;
+    return parsed;
+  }
+
   // Create new user
   async createUser(userData: CreateUserDto & { profilePicture?: string | null }) {
     // Check if email already exists
@@ -27,8 +34,8 @@ export class AdminUserService {
   async getAllUsers(
         page?: string, size?: string, search?: string
     ){
-        const pageNumber = page ? parseInt(page) : 1;
-        const pageSize = size ? parseInt(size) : 10;
+        const pageNumber = this.parsePositiveInteger(page, 1);
+        const pageSize = Math.min(this.parsePositiveInteger(size, 10), 100);
         const {users, total} = await userRepository.getAllUsers(
             pageNumber, pageSize, search
         );

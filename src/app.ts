@@ -10,6 +10,7 @@ import walletRoutes from "./routes/wallet.route";
 import leaderboardRoutes from "./routes/leaderboard.route";
 import notificationRoutes from "./routes/notification.route";
 import path from "path";
+import { CORS_ORIGINS } from "./configs";
 
 
 const app: Application = express();
@@ -21,7 +22,7 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(
   cors({
-    origin: "http://localhost:3000", 
+    origin: CORS_ORIGINS,
     credentials: true,               
   })
 );

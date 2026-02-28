@@ -4,10 +4,14 @@ import { connectDatabase } from "./database/mongodb";
 
 // Start server
 async function startServer() {
-  await connectDatabase();
-  app.listen(PORT, () => {
-    console.log(`Server running at http://localhost:${PORT}`);
-  });
+  try {
+    await connectDatabase();
+    app.listen(PORT, () => {
+      console.log(`Server running at http://localhost:${PORT}`);
+    });
+  } catch {
+    process.exitCode = 1;
+  }
 }
 
 startServer();

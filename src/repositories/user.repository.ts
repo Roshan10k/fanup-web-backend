@@ -1,4 +1,4 @@
-import { QueryFilter } from "mongoose";
+import { ClientSession, QueryFilter } from "mongoose";
 import { UserModel, IUser } from "../models/user.model";
 
 export interface IUserRepository {
@@ -7,7 +7,11 @@ export interface IUserRepository {
 
   getUserById(id: string): Promise<IUser | null>;
   updateUser(id: string, updateData: Partial<IUser>): Promise<IUser | null>;
-  incrementBalance(id: string, amount: number): Promise<IUser | null>;
+  incrementBalance(
+    id: string,
+    amount: number,
+    options?: { session?: ClientSession; minRequiredBalance?: number }
+  ): Promise<IUser | null>;
   deleteUser(id: string): Promise<boolean>;
   getAllUsers(
         page: number, size: number, search?: string
@@ -35,10 +39,9 @@ export class UserRepository implements IUserRepository {
         const filter: QueryFilter<IUser> = {};
         if (search) {
             filter.$or = [
-                { username: { $regex: search, $options: 'i' } },
+                { fullName: { $regex: search, $options: 'i' } },
                 { email: { $regex: search, $options: 'i' } },
-                { firstName: { $regex: search, $options: 'i' } },
-                { lastName: { $regex: search, $options: 'i' } },
+                { phone: { $regex: search, $options: 'i' } },
             ];
         }
         const [users, total] = await Promise.all([
@@ -59,11 +62,21 @@ export class UserRepository implements IUserRepository {
     });
   }
 
-  async incrementBalance(id: string, amount: number): Promise<IUser | null> {
-    return await UserModel.findByIdAndUpdate(
-      id,
+  async incrementBalance(
+    id: string,
+    amount: number,
+    options?: { session?: ClientSession; minRequiredBalance?: number }
+  ): Promise<IUser | null> {
+    const filter: QueryFilter<IUser> = { _id: id };
+
+    if (typeof options?.minRequiredBalance === "number") {
+      filter.balance = { $gte: options.minRequiredBalance };
+    }
+
+    return await UserModel.findOneAndUpdate(
+      filter,
       { $inc: { balance: amount } },
-      { new: true }
+      { new: true, session: options?.session }
     );
   }
 

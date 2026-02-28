@@ -12,6 +12,7 @@ import { MatchModel } from "../models/match.model";
 
 const userRepository = new UserRepository();
 const walletService = new WalletService();
+const INVALID_LOGIN_ERROR = "Invalid credentials";
 
 export class UserService {
   private getProfileCompletionScore(input: {
@@ -52,7 +53,7 @@ export class UserService {
   async loginUser(loginData: LoginUserDto) {
     const user = await userRepository.getUserByEmail(loginData.email);
     if (!user) {
-      throw new HttpError(404, "User not found");
+      throw new HttpError(401, INVALID_LOGIN_ERROR);
     }
 
     const isPasswordValid = await bcryptjs.compare(
@@ -61,7 +62,7 @@ export class UserService {
     );
 
     if (!isPasswordValid) {
-      throw new HttpError(401, "Invalid credentials");
+      throw new HttpError(401, INVALID_LOGIN_ERROR);
     }
 
     await walletService.claimDailyLoginBonus(user._id.toString());
@@ -215,7 +216,8 @@ export class UserService {
         }
         const user = await userRepository.getUserByEmail(email);
         if (!user) {
-            throw new HttpError(404, "User not found");
+            // Return success-like flow to avoid exposing whether an account exists.
+            return;
         }
         const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '1h' }); // 1 hour expiry
         const resetLink = `${CLIENT_URL}/reset-password?token=${token}`;

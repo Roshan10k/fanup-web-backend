@@ -1,4 +1,5 @@
 import { HttpError } from "../errors/http-error";
+import mongoose from "mongoose";
 import { UserRepository } from "../repositories/user.repository";
 import { WalletRepository } from "../repositories/wallet.repository";
 import {
@@ -106,40 +107,66 @@ export class WalletService {
       throw new HttpError(400, "Transaction amount must be positive");
     }
 
-    const user = await userRepository.getUserById(input.userId);
-    if (!user) {
-      throw new HttpError(404, "User not found");
-    }
-
-    if (input.type === "debit" && (user.balance || 0) < input.amount) {
-      throw new HttpError(400, "Insufficient balance");
-    }
-
-    const transaction = await walletRepository.createTransaction({
-      userId: input.userId,
-      type: input.type,
-      source: input.source,
-      amount: input.amount,
-      title: input.title,
-      referenceId: input.referenceId,
-      eventKey: input.eventKey,
-    });
-
-    if (!transaction) {
-      return {
-        created: false,
-        message: "Transaction already applied",
-        amount: input.amount,
-      };
-    }
-
-    const delta = input.type === "credit" ? input.amount : -input.amount;
-    await userRepository.incrementBalance(input.userId, delta);
-
-    return {
-      created: true,
-      message: "Transaction applied",
+    const session = await mongoose.startSession();
+    let output: { created: boolean; message: string; amount: number } = {
+      created: false,
+      message: "Transaction already applied",
       amount: input.amount,
     };
+
+    try {
+      await session.withTransaction(async () => {
+        await walletRepository.createTransaction(
+          {
+            userId: input.userId,
+            type: input.type,
+            source: input.source,
+            amount: input.amount,
+            title: input.title,
+            referenceId: input.referenceId,
+            eventKey: input.eventKey,
+          },
+          session
+        );
+
+        const delta = input.type === "credit" ? input.amount : -input.amount;
+        const updatedUser = await userRepository.incrementBalance(input.userId, delta, {
+          session,
+          minRequiredBalance: input.type === "debit" ? input.amount : undefined,
+        });
+
+        if (!updatedUser) {
+          const user = await userRepository.getUserById(input.userId);
+          if (!user) {
+            throw new HttpError(404, "User not found");
+          }
+          throw new HttpError(400, "Insufficient balance");
+        }
+
+        output = {
+          created: true,
+          message: "Transaction applied",
+          amount: input.amount,
+        };
+      });
+    } catch (error: unknown) {
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "code" in error &&
+        error.code === 11000
+      ) {
+        return {
+          created: false,
+          message: "Transaction already applied",
+          amount: input.amount,
+        };
+      }
+      throw error;
+    } finally {
+      await session.endSession();
+    }
+
+    return output;
   }
 }

@@ -188,9 +188,9 @@ describe("Auth API Integration Tests", () => {
         password: "password123",
       });
 
-      expect(res.statusCode).toBe(404);
+      expect(res.statusCode).toBe(401);
       expect(res.body.success).toBe(false);
-      expect(res.body.message).toBe("User not found");
+      expect(res.body.message).toBe("Invalid credentials");
     });
 
     test("14. should fail for wrong password", async () => {
@@ -214,14 +214,16 @@ describe("Auth API Integration Tests", () => {
       expect(res.body.message).toBe("Email is required");
     });
 
-    test("16. should fail for unknown email", async () => {
+    test("16. should return generic success for unknown email", async () => {
+      mockedSendEmail.mockClear();
+
       const res = await request(app).post("/api/auth/request-password-reset").send({
         email: `unknown-reset-${runId}@example.com`,
       });
 
-      expect(res.statusCode).toBe(404);
-      expect(res.body.success).toBe(false);
-      expect(res.body.message).toBe("User not found");
+      expect(res.statusCode).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(mockedSendEmail).not.toHaveBeenCalled();
     });
 
     test("17. should send reset email for existing user", async () => {

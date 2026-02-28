@@ -1,4 +1,4 @@
-import { Types } from "mongoose";
+import { ClientSession, Types } from "mongoose";
 import {
   IWalletTransaction,
   WalletTransactionModel,
@@ -7,27 +7,15 @@ import { WalletTransaction } from "../types/wallet-transaction.type";
 
 export class WalletRepository {
   async createTransaction(
-    transactionData: WalletTransaction
-  ): Promise<IWalletTransaction | null> {
-    try {
-      const transaction = new WalletTransactionModel({
-        ...transactionData,
-        userId: new Types.ObjectId(transactionData.userId),
-      });
-      await transaction.save();
-      return transaction;
-    } catch (error: unknown) {
-      // Duplicate event key means idempotent no-op.
-      if (
-        typeof error === "object" &&
-        error !== null &&
-        "code" in error &&
-        error.code === 11000
-      ) {
-        return null;
-      }
-      throw error;
-    }
+    transactionData: WalletTransaction,
+    session?: ClientSession
+  ): Promise<IWalletTransaction> {
+    const transaction = new WalletTransactionModel({
+      ...transactionData,
+      userId: new Types.ObjectId(transactionData.userId),
+    });
+    await transaction.save({ session });
+    return transaction;
   }
 
   async getTransactionsByUser(
