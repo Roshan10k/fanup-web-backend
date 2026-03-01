@@ -31,3 +31,5 @@ export const EMAIL_PASS: string =
     process.env.EMAIL_PASS || 'password';
 
 export const FCM_SERVER_KEY: string = process.env.FCM_SERVER_KEY || "";
+
+export const GOOGLE_CLIENT_ID: string = process.env.GOOGLE_CLIENT_ID || "";

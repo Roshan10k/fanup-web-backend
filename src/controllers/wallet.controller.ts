@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { HttpError } from "../errors/http-error";
 import { WalletService } from "../services/wallet.service";
+import { createLink, createPaginationLinks, buildLinkHeader } from "../helpers/hateoas";
 
 const walletService = new WalletService();
 
@@ -17,6 +18,11 @@ export class WalletController {
         success: true,
         message: "Wallet summary fetched successfully",
         data: summary,
+        _links: {
+          self: createLink("/api/wallet/summary", "GET"),
+          transactions: createLink("/api/wallet/transactions", "GET", "View transaction history"),
+          dailyBonus: createLink("/api/wallet/daily-bonus", "POST", "Claim daily bonus"),
+        },
       });
     } catch (error: unknown) {
       if (error instanceof HttpError) {
@@ -42,7 +48,22 @@ export class WalletController {
 
       const page = Number(req.query.page || 1);
       const size = Number(req.query.size || 20);
-      const result = await walletService.getTransactions(userId, page, size);
+      const sortBy = String(req.query.sortBy || "").trim() || undefined;
+      const sortOrder = String(req.query.sortOrder || "").trim() || undefined;
+      const result = await walletService.getTransactions(userId, page, size, sortBy, sortOrder);
+
+      const paginationLinks = createPaginationLinks(
+        "/api/wallet/transactions",
+        result.pagination.page,
+        result.pagination.totalPages,
+        result.pagination.size
+      );
+
+      res.setHeader(
+        "Link",
+        buildLinkHeader("/api/wallet/transactions", result.pagination.page, result.pagination.totalPages, result.pagination.size)
+      );
+      res.setHeader("X-Total-Count", String(result.pagination.total));
 
       return res.status(200).json({
         success: true,
@@ -57,6 +78,10 @@ export class WalletController {
           createdAt: item.createdAt,
         })),
         pagination: result.pagination,
+        _links: {
+          ...paginationLinks,
+          summary: createLink("/api/wallet/summary", "GET", "View wallet summary"),
+        },
       });
     } catch (error: unknown) {
       if (error instanceof HttpError) {
@@ -91,6 +116,11 @@ export class WalletController {
         data: {
           ...result,
           summary,
+        },
+        _links: {
+          self: createLink("/api/wallet/daily-bonus", "POST"),
+          summary: createLink("/api/wallet/summary", "GET", "View wallet summary"),
+          transactions: createLink("/api/wallet/transactions", "GET", "View transaction history"),
         },
       });
     } catch (error: unknown) {
@@ -137,6 +167,11 @@ export class WalletController {
         data: {
           ...result,
           summary,
+        },
+        _links: {
+          self: createLink("/api/wallet/contest-join", "POST"),
+          summary: createLink("/api/wallet/summary", "GET", "View wallet summary"),
+          transactions: createLink("/api/wallet/transactions", "GET", "View transaction history"),
         },
       });
     } catch (error: unknown) {

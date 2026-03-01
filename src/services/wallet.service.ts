@@ -31,7 +31,7 @@ export class WalletService {
     };
   }
 
-  async getTransactions(userId: string, page = 1, size = 20) {
+  async getTransactions(userId: string, page = 1, size = 20, sortBy?: string, sortOrder?: string) {
     const safePage = Number.isFinite(page) ? Math.max(1, Math.floor(page)) : 1;
     const safeSize = Number.isFinite(size)
       ? Math.max(1, Math.min(100, Math.floor(size)))
@@ -40,7 +40,9 @@ export class WalletService {
     const { rows, total } = await walletRepository.getTransactionsByUser(
       userId,
       safePage,
-      safeSize
+      safeSize,
+      sortBy,
+      sortOrder
     );
 
     return {
@@ -78,9 +80,8 @@ export class WalletService {
     });
   }
 
-  async applyContestJoinDebit(userId: string, matchId: string, teamId?: string) {
+  async applyContestJoinDebit(userId: string, matchId: string, _teamId?: string) {
     const safeMatchId = matchId.trim() || "unknown_match";
-    const safeTeamId = teamId?.trim() || "unknown_team";
     const eventKey = `contest_join:${userId}:${safeMatchId}`;
 
     return await this.createBalanceTransaction({

@@ -21,13 +21,20 @@ export class WalletRepository {
   async getTransactionsByUser(
     userId: string,
     page: number,
-    size: number
+    size: number,
+    sortBy?: string,
+    sortOrder?: string
   ): Promise<{ rows: IWalletTransaction[]; total: number }> {
     const filter = { userId: new Types.ObjectId(userId) };
 
+    // Client-driven sorting with allowed field whitelist
+    const allowedSortFields = ["createdAt", "amount", "type", "source"];
+    const sortField = allowedSortFields.includes(sortBy || "") ? sortBy! : "createdAt";
+    const sortDirection: 1 | -1 = sortOrder === "asc" ? 1 : -1;
+
     const [rows, total] = await Promise.all([
       WalletTransactionModel.find(filter)
-        .sort({ createdAt: -1 })
+        .sort({ [sortField]: sortDirection })
         .skip((page - 1) * size)
         .limit(size),
       WalletTransactionModel.countDocuments(filter),

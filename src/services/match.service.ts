@@ -25,8 +25,10 @@ export class MatchService {
     size?: string;
     league?: string;
     status?: string;
+    sortBy?: string;
+    sortOrder?: string;
   }) {
-    const { page, size, league, status } = input;
+    const { page, size, league, status, sortBy, sortOrder } = input;
     const currentPage = Math.max(parseInt(page || "1", 10) || 1, 1);
     const currentSize = Math.max(parseInt(size || "10", 10) || 10, 1);
 
@@ -52,7 +54,11 @@ export class MatchService {
       filter.league = league.trim();
     }
 
-    const sort: Record<string, 1 | -1> = { startTime: -1 };
+    // Client-driven sorting with allowed field whitelist
+    const allowedSortFields = ["startTime", "league", "status", "createdAt"];
+    const sortField = allowedSortFields.includes(sortBy || "") ? sortBy! : "startTime";
+    const sortDirection: 1 | -1 = sortOrder === "asc" ? 1 : -1;
+    const sort: Record<string, 1 | -1> = { [sortField]: sortDirection };
 
     const [matches, totalItems] = await Promise.all([
       MatchModel.find(filter)

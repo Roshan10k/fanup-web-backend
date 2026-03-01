@@ -34,7 +34,7 @@ export class UserRepository implements IUserRepository {
   }
 
   async getAllUsers(
-        page: number, size: number, search?: string
+        page: number, size: number, search?: string, sortBy?: string, sortOrder?: string
     ): Promise<{users: IUser[], total: number}> {
         const filter: QueryFilter<IUser> = {};
         if (search) {
@@ -44,8 +44,15 @@ export class UserRepository implements IUserRepository {
                 { phone: { $regex: search, $options: 'i' } },
             ];
         }
+
+        // Client-driven sorting with allowed field whitelist
+        const allowedSortFields = ["fullName", "email", "createdAt", "role"];
+        const sortField = allowedSortFields.includes(sortBy || "") ? sortBy! : "createdAt";
+        const sortDirection: 1 | -1 = sortOrder === "asc" ? 1 : -1;
+
         const [users, total] = await Promise.all([
             UserModel.find(filter)
+                .sort({ [sortField]: sortDirection })
                 .skip((page - 1) * size)
                 .limit(size),
             UserModel.countDocuments(filter)

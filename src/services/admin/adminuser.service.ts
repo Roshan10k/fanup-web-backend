@@ -23,7 +23,7 @@ export class AdminUserService {
 
     // Hash password
     const hashedPassword = await bcryptjs.hash(userData.password, 10);
-    const { confirmPassword, ...userPayload } = userData;
+    const { confirmPassword: _confirmPassword, ...userPayload } = userData;
     userPayload.password = hashedPassword;
 
     const newUser = await userRepository.createUser(userPayload);
@@ -32,12 +32,12 @@ export class AdminUserService {
 
   // Get all users with pagination and optional search
   async getAllUsers(
-        page?: string, size?: string, search?: string
+        page?: string, size?: string, search?: string, sortBy?: string, sortOrder?: string
     ){
         const pageNumber = this.parsePositiveInteger(page, 1);
         const pageSize = Math.min(this.parsePositiveInteger(size, 10), 100);
         const {users, total} = await userRepository.getAllUsers(
-            pageNumber, pageSize, search
+            pageNumber, pageSize, search, sortBy, sortOrder
         );
         const pagination = {
             page: pageNumber,

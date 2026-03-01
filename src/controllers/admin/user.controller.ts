@@ -4,6 +4,7 @@ import { UpdateUserDtoSchema, CreateUserDtoSchema } from "../../dtos/user.dto";
 import { HttpError } from "../../errors/http-error";
 import { AdminUserService } from "../../services/admin/adminuser.service";
 import { QueryParams } from "../../types/query.type";
+import { createLink, createPaginationLinks, buildLinkHeader } from "../../helpers/hateoas";
 
 
 const adminUserService = new AdminUserService();
@@ -22,13 +23,23 @@ export class AdminUserController {
         profilePicture
       });
       
-      const { password, ...userWithoutPassword } = newUser.toObject();
+      const { password: _pw1, ...userWithoutPassword } = newUser.toObject();
 
-      return res.status(201).json({
-        success: true,
-        message: "User created successfully",
-        data: userWithoutPassword,
-      });
+      const userId = userWithoutPassword._id.toString();
+      return res
+        .setHeader("Location", `/api/admin/users/${userId}`)
+        .status(201)
+        .json({
+          success: true,
+          message: "User created successfully",
+          data: userWithoutPassword,
+          _links: {
+            self: createLink(`/api/admin/users/${userId}`, "GET"),
+            update: createLink(`/api/admin/users/${userId}`, "PUT", "Update this user"),
+            delete: createLink(`/api/admin/users/${userId}`, "DELETE", "Delete this user"),
+            list: createLink("/api/admin/users", "GET", "View all users"),
+          },
+        });
     } catch (error) {
       if (error instanceof HttpError) {
         return res.status(error.statusCode).json({
@@ -45,18 +56,40 @@ export class AdminUserController {
   }
 
   // Get all users
-  async getAllUsers(req: Request, res: Response, next: NextFunction) {
+  async getAllUsers(req: Request, res: Response, _next: NextFunction) {
         try {
-            const { page, size, search }: QueryParams = req.query;
+            const { page, size, search, sortBy, sortOrder }: QueryParams & { sortBy?: string; sortOrder?: string } = req.query;
             const { users, pagination } = await adminUserService.getAllUsers(
-                page, size, search
+                page, size, search, sortBy, sortOrder
             );
+
+            const paginationLinks = createPaginationLinks(
+              "/api/admin/users",
+              pagination.page,
+              pagination.totalPages,
+              pagination.size,
+              { search, sortBy, sortOrder }
+            );
+
+            res.setHeader(
+              "Link",
+              buildLinkHeader("/api/admin/users", pagination.page, pagination.totalPages, pagination.size, { search, sortBy, sortOrder })
+            );
+            res.setHeader("X-Total-Count", String(pagination.totalItems));
+
             return res.status(200).json(
-                { success: true, data: users, pagination: pagination, message: "All Users Retrieved" }
+                { success: true, data: users, pagination: pagination, message: "All Users Retrieved",
+                  _links: {
+                    ...paginationLinks,
+                    create: createLink("/api/admin/users", "POST", "Create a new user"),
+                    stats: createLink("/api/admin/users/stats", "GET", "View user statistics"),
+                  },
+                }
             );
-        } catch (error: Error | any) {
-            return res.status(error.statusCode ?? 500).json(
-                { success: false, message: error.message || "Internal Server Error" }
+        } catch (error: unknown) {
+            const httpErr = error as { statusCode?: number; message?: string };
+            return res.status(httpErr.statusCode ?? 500).json(
+                { success: false, message: httpErr.message || "Internal Server Error" }
             );
         }
     }
@@ -67,12 +100,18 @@ export class AdminUserController {
       const { id } = req.params;
       const user = await adminUserService.getUserById(id);
       
-      const { password, ...userWithoutPassword } = user.toObject();
+      const { password: _pw2, ...userWithoutPassword } = user.toObject();
 
       return res.status(200).json({
         success: true,
         message: "User retrieved successfully",
         data: userWithoutPassword,
+        _links: {
+          self: createLink(`/api/admin/users/${id}`, "GET"),
+          update: createLink(`/api/admin/users/${id}`, "PUT", "Update this user"),
+          delete: createLink(`/api/admin/users/${id}`, "DELETE", "Delete this user"),
+          list: createLink("/api/admin/users", "GET", "View all users"),
+        },
       });
     } catch (error) {
       if (error instanceof HttpError) {
@@ -101,12 +140,18 @@ export class AdminUserController {
       }
       
       const updatedUser = await adminUserService.updateUser(id, validatedData);
-      const { password, ...userWithoutPassword } = updatedUser.toObject();
+      const { password: _pw3, ...userWithoutPassword } = updatedUser.toObject();
 
       return res.status(200).json({
         success: true,
         message: "User updated successfully",
         data: userWithoutPassword,
+        _links: {
+          self: createLink(`/api/admin/users/${id}`, "PUT"),
+          view: createLink(`/api/admin/users/${id}`, "GET", "View this user"),
+          delete: createLink(`/api/admin/users/${id}`, "DELETE", "Delete this user"),
+          list: createLink("/api/admin/users", "GET", "View all users"),
+        },
       });
     } catch (error) {
       if (error instanceof HttpError) {
@@ -133,6 +178,10 @@ export class AdminUserController {
       return res.status(200).json({
         success: true,
         message: "User deleted successfully",
+        _links: {
+          list: createLink("/api/admin/users", "GET", "View all users"),
+          create: createLink("/api/admin/users", "POST", "Create a new user"),
+        },
       });
     } catch (error) {
       if (error instanceof HttpError) {
@@ -158,8 +207,12 @@ export class AdminUserController {
         success: true,
         message: "User statistics retrieved successfully",
         data: stats,
+        _links: {
+          self: createLink("/api/admin/users/stats", "GET"),
+          list: createLink("/api/admin/users", "GET", "View all users"),
+        },
       });
-    } catch (error) {
+    } catch {
       return res.status(500).json({
         success: false,
         message: "Failed to retrieve statistics",

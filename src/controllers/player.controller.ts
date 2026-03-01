@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { PlayerService } from "../services/player.service";
+import { createLink } from "../helpers/hateoas";
 
 const playerService = new PlayerService();
 
@@ -20,6 +21,10 @@ export class PlayerController {
         success: true,
         message: "Players retrieved successfully",
         data: players,
+        _links: {
+          self: createLink(`/api/players${teamsParam ? `?teamShortNames=${teamsParam}` : ""}`, "GET"),
+          matches: createLink("/api/matches", "GET", "Browse matches"),
+        },
       });
     } catch {
       return res.status(500).json({

@@ -1,17 +1,20 @@
 import { Request, Response } from "express";
 import { HttpError } from "../errors/http-error";
 import { MatchService } from "../services/match.service";
+import { createLink, createPaginationLinks, buildLinkHeader } from "../helpers/hateoas";
 
 const matchService = new MatchService();
 
 export class MatchController {
   async listMatches(req: Request, res: Response) {
     try {
-      const { page, size, league, status } = req.query as {
+      const { page, size, league, status, sortBy, sortOrder } = req.query as {
         page?: string;
         size?: string;
         league?: string;
         status?: string;
+        sortBy?: string;
+        sortOrder?: string;
       };
 
       const { matches, pagination } = await matchService.listMatches({
@@ -19,13 +22,33 @@ export class MatchController {
         size,
         league,
         status,
+        sortBy,
+        sortOrder,
       });
+
+      const paginationLinks = createPaginationLinks(
+        "/api/matches",
+        pagination.page,
+        pagination.totalPages,
+        pagination.size,
+        { league, status, sortBy, sortOrder }
+      );
+
+      res.setHeader(
+        "Link",
+        buildLinkHeader("/api/matches", pagination.page, pagination.totalPages, pagination.size, { league, status, sortBy, sortOrder })
+      );
+      res.setHeader("X-Total-Count", String(pagination.totalItems));
 
       return res.status(200).json({
         success: true,
         message: "Matches retrieved successfully",
         data: matches,
         pagination,
+        _links: {
+          ...paginationLinks,
+          completed: createLink("/api/matches/completed", "GET", "View completed matches"),
+        },
       });
     } catch (error) {
       if (error instanceof HttpError) {
@@ -56,11 +79,29 @@ export class MatchController {
         league
       );
 
+      const paginationLinks = createPaginationLinks(
+        "/api/matches/completed",
+        pagination.page,
+        pagination.totalPages,
+        pagination.size,
+        { league }
+      );
+
+      res.setHeader(
+        "Link",
+        buildLinkHeader("/api/matches/completed", pagination.page, pagination.totalPages, pagination.size, { league })
+      );
+      res.setHeader("X-Total-Count", String(pagination.totalItems));
+
       return res.status(200).json({
         success: true,
         message: "Completed matches retrieved successfully",
         data: matches,
         pagination,
+        _links: {
+          ...paginationLinks,
+          allMatches: createLink("/api/matches", "GET", "View all matches"),
+        },
       });
     } catch (error) {
       if (error instanceof HttpError) {
@@ -86,6 +127,11 @@ export class MatchController {
         success: true,
         message: "Match scorecard retrieved successfully",
         data: result,
+        _links: {
+          self: createLink(`/api/matches/${id}/scorecard`, "GET"),
+          matches: createLink("/api/matches", "GET", "Browse all matches"),
+          leaderboard: createLink(`/api/leaderboard/contests/${id}`, "GET", "View match leaderboard"),
+        },
       });
     } catch (error) {
       if (error instanceof HttpError) {
@@ -121,6 +167,11 @@ export class MatchController {
         success: true,
         message: output.message,
         data: output,
+        _links: {
+          self: createLink(`/api/matches/${id}/complete`, "PATCH"),
+          match: createLink(`/api/matches/${id}/scorecard`, "GET", "View scorecard"),
+          matches: createLink("/api/matches", "GET", "Browse all matches"),
+        },
       });
     } catch (error) {
       if (error instanceof HttpError) {

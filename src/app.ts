@@ -1,4 +1,4 @@
-import express, { Application, Request, Response } from "express";
+import express, { Application } from "express";
 import cors from "cors"; 
 import authRoutes from "./routes/auth.route";
 import userRoutes from "./routes/user.route";
@@ -11,6 +11,7 @@ import leaderboardRoutes from "./routes/leaderboard.route";
 import notificationRoutes from "./routes/notification.route";
 import path from "path";
 import { CORS_ORIGINS } from "./configs";
+import { etagMiddleware } from "./middlewares/etag.middleware";
 
 
 const app: Application = express();
@@ -18,6 +19,9 @@ const app: Application = express();
 // middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Conditional HTTP request support (ETag / If-None-Match → 304 Not Modified)
+app.use(etagMiddleware);
 
 
 app.use(

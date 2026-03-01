@@ -3,6 +3,7 @@ import { RegisterDeviceTokenDtoSchema } from "../dtos/device-token.dto";
 import { HttpError } from "../errors/http-error";
 import { NotificationService } from "../services/notification.service";
 import { PushService } from "../services/push.service";
+import { createLink } from "../helpers/hateoas";
 
 const notificationService = new NotificationService();
 const pushService = new PushService();
@@ -28,6 +29,10 @@ export class NotificationController {
         success: true,
         message: "Device token registered successfully",
         data: result,
+        _links: {
+          self: createLink("/api/notifications/devices/register", "POST"),
+          notifications: createLink("/api/notifications", "GET", "View notifications"),
+        },
       });
     } catch (error: unknown) {
       if (error instanceof HttpError) {
@@ -61,6 +66,10 @@ export class NotificationController {
         success: true,
         message: "Device token unregistered successfully",
         data: result,
+        _links: {
+          self: createLink(`/api/notifications/devices/${token}`, "DELETE"),
+          register: createLink("/api/notifications/devices/register", "POST", "Register new device"),
+        },
       });
     } catch (error: unknown) {
       if (error instanceof HttpError) {
@@ -93,6 +102,11 @@ export class NotificationController {
         success: true,
         message: "Notifications retrieved successfully",
         data: result,
+        _links: {
+          self: createLink(`/api/notifications?page=${page}&size=${size}`, "GET"),
+          unreadCount: createLink("/api/notifications/unread-count", "GET", "Get unread count"),
+          markAllRead: createLink("/api/notifications/read-all", "PATCH", "Mark all as read"),
+        },
       });
     } catch (error: unknown) {
       if (error instanceof HttpError) {
@@ -122,6 +136,11 @@ export class NotificationController {
         success: true,
         message: "Unread count retrieved successfully",
         data: result,
+        _links: {
+          self: createLink("/api/notifications/unread-count", "GET"),
+          notifications: createLink("/api/notifications", "GET", "View all notifications"),
+          markAllRead: createLink("/api/notifications/read-all", "PATCH", "Mark all as read"),
+        },
       });
     } catch (error: unknown) {
       if (error instanceof HttpError) {
@@ -152,6 +171,11 @@ export class NotificationController {
         success: true,
         message: "Notification marked as read",
         data: result,
+        _links: {
+          self: createLink(`/api/notifications/${id}/read`, "PATCH"),
+          notifications: createLink("/api/notifications", "GET", "View all notifications"),
+          delete: createLink(`/api/notifications/${id}`, "DELETE", "Delete this notification"),
+        },
       });
     } catch (error: unknown) {
       if (error instanceof HttpError) {
@@ -181,6 +205,10 @@ export class NotificationController {
         success: true,
         message: "All notifications marked as read",
         data: result,
+        _links: {
+          self: createLink("/api/notifications/read-all", "PATCH"),
+          notifications: createLink("/api/notifications", "GET", "View all notifications"),
+        },
       });
     } catch (error: unknown) {
       if (error instanceof HttpError) {
@@ -211,6 +239,10 @@ export class NotificationController {
         success: true,
         message: "Notification deleted",
         data: result,
+        _links: {
+          self: createLink(`/api/notifications/${id}`, "DELETE"),
+          notifications: createLink("/api/notifications", "GET", "View all notifications"),
+        },
       });
     } catch (error: unknown) {
       if (error instanceof HttpError) {

@@ -14,6 +14,7 @@ router.post("/register", authController.registerUser);
 
 // Login user
 router.post("/login", authController.loginUser);
+router.post("/google", authController.loginWithGoogle);
 
 // Upload profile picture (existing endpoint)
 router.post(

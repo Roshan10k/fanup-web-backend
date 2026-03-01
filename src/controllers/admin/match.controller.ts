@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { HttpError } from "../../errors/http-error";
 import { MatchService } from "../../services/match.service";
 import { LeaderboardService } from "../../services/leaderboard.service";
+import { createLink } from "../../helpers/hateoas";
 
 const matchService = new MatchService();
 const leaderboardService = new LeaderboardService();
@@ -27,6 +28,9 @@ export class AdminMatchController {
         success: true,
         message: "Matches retrieved successfully",
         data: matches,
+        _links: {
+          self: createLink("/api/admin/matches", "GET"),
+        },
       });
     } catch (error) {
       if (error instanceof HttpError) {
@@ -60,6 +64,12 @@ export class AdminMatchController {
         success: true,
         message: "Leaderboard retrieved successfully",
         data: result,
+        _links: {
+          self: createLink(`/api/admin/matches/${matchId}/leaderboard`, "GET"),
+          matches: createLink("/api/admin/matches", "GET", "View all matches"),
+          lock: createLink(`/api/admin/matches/${matchId}/lock`, "PATCH", "Lock this match"),
+          complete: createLink(`/api/admin/matches/${matchId}/complete`, "PATCH", "Complete this match"),
+        },
       });
     } catch (error) {
       if (error instanceof HttpError) {
@@ -89,6 +99,12 @@ export class AdminMatchController {
         success: true,
         message: result.message,
         data: result,
+        _links: {
+          self: createLink(`/api/admin/matches/${matchId}/lock`, "PATCH"),
+          leaderboard: createLink(`/api/admin/matches/${matchId}/leaderboard`, "GET", "View leaderboard"),
+          complete: createLink(`/api/admin/matches/${matchId}/complete`, "PATCH", "Complete and settle"),
+          matches: createLink("/api/admin/matches", "GET", "View all matches"),
+        },
       });
     } catch (error) {
       if (error instanceof HttpError) {
@@ -127,6 +143,11 @@ export class AdminMatchController {
         success: true,
         message: output.message,
         data: output,
+        _links: {
+          self: createLink(`/api/admin/matches/${matchId}/complete`, "PATCH"),
+          leaderboard: createLink(`/api/admin/matches/${matchId}/leaderboard`, "GET", "View final leaderboard"),
+          matches: createLink("/api/admin/matches", "GET", "View all matches"),
+        },
       });
     } catch (error) {
       if (error instanceof HttpError) {

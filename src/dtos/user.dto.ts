@@ -38,3 +38,9 @@ export const LoginUserDtoSchema = z.object({
 });
 
 export type LoginUserDto = z.infer<typeof LoginUserDtoSchema>;
+
+export const GoogleLoginDtoSchema = z.object({
+  credential: z.string().min(1, "Google credential is required"),
+});
+
+export type GoogleLoginDto = z.infer<typeof GoogleLoginDtoSchema>;
