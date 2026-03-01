@@ -138,7 +138,7 @@ function buildPlayerPerformances(innings: [Innings, Innings]): PlayerPerf[] {
       // Catches: "c Name b Bowler" or "c & b Name"
       const catchMatch = dism.match(/^c\s+(\S.*?)\s+b\s+/);
       if (catchMatch && !dism.includes("c & b")) {
-        let catcherName = catchMatch[1].replace(/†$/, "").trim();
+        const catcherName = catchMatch[1].replace(/†$/, "").trim();
         if (catcherName && catcherName !== "sub") {
           // Need to find original case name from bowlers/batsmen
           const catcher = findOriginalName(catcherName, innings) || catcherName;
@@ -159,7 +159,7 @@ function buildPlayerPerformances(innings: [Innings, Innings]): PlayerPerf[] {
       // Stumpings: "st Name b Bowler"
       const stumpMatch = dism.match(/^st\s+(\S.*?)\s+b\s+/);
       if (stumpMatch) {
-        let keeperName = stumpMatch[1].replace(/†$/, "").trim();
+        const keeperName = stumpMatch[1].replace(/†$/, "").trim();
         const keeper = findOriginalName(keeperName, innings) || keeperName;
         const keeperPerf = getPerf(keeper, bowlingTeam);
         keeperPerf.stumpings += 1;
@@ -1273,7 +1273,7 @@ export async function seedIPL2024Matches() {
         result: match.result,
         winnerTeamShortName: match.winnerTeamShortName,
         summary: match.summary,
-      } as any);
+      } as Record<string, unknown>);
 
       // Create scorecard with playerPerformances for fantasy points calculation
       const playerPerformances = buildPlayerPerformances(match.innings);

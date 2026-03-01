@@ -1,6 +1,6 @@
 import { HttpError } from "../errors/http-error";
 import { NotificationRepository } from "../repositories/notification.repository";
-import { NotificationData, NotificationType } from "../types/notification.type";
+import { NotificationData } from "../types/notification.type";
 
 const notificationRepository = new NotificationRepository();
 

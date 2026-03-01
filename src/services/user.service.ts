@@ -3,18 +3,35 @@ import bcryptjs from "bcryptjs";
 import { HttpError } from "../errors/http-error";
 import { CreateUserDto, LoginUserDto, UpdateUserDto } from "../dtos/user.dto";
 import jwt from "jsonwebtoken";
-import { CLIENT_URL, JWT_SECRET} from "../configs";
+import { CLIENT_URL, GOOGLE_CLIENT_ID, JWT_SECRET} from "../configs";
 import { sendEmail } from "../configs/email";
 import { WalletService } from "./wallet.service";
 import mongoose from "mongoose";
 import { ContestEntryModel } from "../models/contest-entry.model";
 import { MatchModel } from "../models/match.model";
+import { v4 as uuidv4 } from "uuid";
+import axios from "axios";
 
 const userRepository = new UserRepository();
 const walletService = new WalletService();
 const INVALID_LOGIN_ERROR = "Invalid credentials";
 
+type GoogleTokenInfoResponse = {
+  aud?: string;
+  email?: string;
+  email_verified?: string;
+  name?: string;
+};
+
 export class UserService {
+  private createAuthToken(input: {
+    id: mongoose.Types.ObjectId;
+    email: string;
+    role: "user" | "admin";
+  }) {
+    return jwt.sign(input, JWT_SECRET, { expiresIn: "30d" });
+  }
+
   private getProfileCompletionScore(input: {
     hasFullName: boolean;
     hasEmail: boolean;
@@ -36,7 +53,7 @@ export class UserService {
     }
 
     const hashedPassword = await bcryptjs.hash(userData.password, 10);
-    const { confirmPassword, ...userPayload } = userData;
+    const { confirmPassword: _confirmPassword, ...userPayload } = userData;
     userPayload.password = hashedPassword;
 
     const newUser = await userRepository.createUser(userPayload);
@@ -72,14 +89,80 @@ export class UserService {
       throw new HttpError(404, "User not found");
     }
 
-     const payload = {
-      //what to store in token
+    const payload = {
       id: refreshedUser._id,
       email: refreshedUser.email,
       role: refreshedUser.role,
-    }
-    const token = jwt.sign(payload, JWT_SECRET, {expiresIn: '30d'}); //30days
+    };
+    const token = this.createAuthToken(payload);
     return {token, user: refreshedUser};
+  }
+
+  async loginWithGoogle(credential: string) {
+    if (!GOOGLE_CLIENT_ID) {
+      throw new HttpError(500, "Google login is not configured");
+    }
+
+    let tokenInfo: GoogleTokenInfoResponse;
+    try {
+      const response = await axios.get<GoogleTokenInfoResponse>(
+        "https://oauth2.googleapis.com/tokeninfo",
+        {
+          params: { id_token: credential },
+          timeout: 10000,
+        }
+      );
+      tokenInfo = response.data;
+    } catch {
+      throw new HttpError(401, "Invalid Google credential");
+    }
+
+    const audience = tokenInfo.aud?.trim();
+    const email = tokenInfo.email?.trim().toLowerCase();
+    const emailVerified = tokenInfo.email_verified?.toLowerCase() === "true";
+
+    if (!audience || audience !== GOOGLE_CLIENT_ID) {
+      throw new HttpError(401, "Google credential audience mismatch");
+    }
+
+    if (!email || !emailVerified) {
+      throw new HttpError(401, "Google account email is not verified");
+    }
+
+    let user = await userRepository.getUserByEmail(email);
+    let isNewUser = false;
+
+    if (!user) {
+      isNewUser = true;
+      const generatedPassword = await bcryptjs.hash(uuidv4(), 10);
+      const fallbackName = email.split("@")[0] || "FanUp User";
+      const fullName = tokenInfo.name?.trim() || fallbackName;
+
+      user = await userRepository.createUser({
+        fullName,
+        email,
+        password: generatedPassword,
+        role: "user",
+      });
+    }
+
+    if (isNewUser) {
+      await walletService.applyWelcomeBonusIfEligible(user._id.toString());
+    }
+    await walletService.claimDailyLoginBonus(user._id.toString());
+
+    const refreshedUser = await userRepository.getUserById(user._id.toString());
+    if (!refreshedUser) {
+      throw new HttpError(404, "User not found");
+    }
+
+    const payload = {
+      id: refreshedUser._id,
+      email: refreshedUser.email,
+      role: refreshedUser.role,
+    };
+    const token = this.createAuthToken(payload);
+    return { token, user: refreshedUser };
   }
 
   async updateProfile(userId: string, updateData: UpdateUserDto) {
@@ -232,7 +315,7 @@ export class UserService {
             if (!token || !newPassword) {
                 throw new HttpError(400, "Token and new password are required");
             }
-            const decoded: any = jwt.verify(token, JWT_SECRET);
+            const decoded = jwt.verify(token, JWT_SECRET) as { id: string };
             const userId = decoded.id;
             const user = await userRepository.getUserById(userId);
             if (!user) {
@@ -241,7 +324,7 @@ export class UserService {
             const hashedPassword = await bcryptjs.hash(newPassword, 10);
             await userRepository.updateUser(userId, { password: hashedPassword });
             return user;
-        } catch (error) {
+        } catch {
             throw new HttpError(400, "Invalid or expired token");
         }
     }
