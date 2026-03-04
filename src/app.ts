@@ -26,15 +26,7 @@ app.use(etagMiddleware);
 
 app.use(
   cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (mobile apps, curl, server-to-server)
-      if (!origin) return callback(null, true);
-      // Allow any *.vercel.app preview/production URL
-      if (origin.endsWith(".vercel.app")) return callback(null, true);
-      // Allow explicitly listed origins (e.g. http://localhost:3000)
-      if (CORS_ORIGINS.includes(origin)) return callback(null, true);
-      callback(new Error("Not allowed by CORS"));
-    },
+    origin: CORS_ORIGINS,
     credentials: true,
   })
 );
